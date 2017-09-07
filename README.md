@@ -1,6 +1,8 @@
 A Team - System Integration Project 
 ===================================
 
+![A Team](./ateamlogo.png "There is no Plan B.")
+
 Udacity Term 3 Final Capstone Project
 
 ## The A Team
