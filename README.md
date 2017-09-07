@@ -44,6 +44,7 @@ Slack channel - *#ateam*
   - output: control commands to vehicle
 * Here's a handy flowchart for PID tuning.
 
+![PID Tuning](http://support.motioneng.com/Downloads-Notes/Tuning/images/overshoot_flowchart.gif "PID Tuning")
 
 ### Explicit Requirements
 * Code via GitHub
@@ -69,9 +70,3 @@ Slack channel - *#ateam*
 ### Notable Slack Channels
 * _#p-system-integration_ - Seems to be where this project is being discussed.
 * _#sdc-ros_ - ROS topics.
-
-
-![PID Tuning](http://support.motioneng.com/Downloads-Notes/Tuning/images/overshoot_flowchart.gif "PID Tuning")
-
-
-
