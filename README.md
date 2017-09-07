@@ -2,26 +2,26 @@ A Team - System Integration Project
 ===================================
 
 Udacity Term 3 
-Due: 2017-10-06 <- Is this correct? It says "Due in 1 month" on 2017-09-06.
+
+Due: *2017-10-06* <- Is this correct? It says "Due in 1 month" on 2017-09-06.
 
 ## The A Team
-* Slack channel - "ateam"
-* Members -
-  0. Chris @cxed UTC-7
-  1. Vince @vincec UTC-7
-  2. William @williambeverly UTC+2
-  3. Andreas @jankl.andreas UTC+2
-  4. Markus @markus.meyerhofer UTC+2
+* Slack channel - *ateam*
+* Members
+  - 0. Chris _@cxed_ UTC-7
+  - 1. Vince _@vincec_ UTC-7
+  - 2. William _@williambeverly_ UTC+2
+  - 3. Andreas _@jankl.andreas_ UTC+2
+  - 4. Markus _@markus.meyerhofer_ UTC+2
 
 [Team Sign Up Spreadsheet](https://docs.google.com/spreadsheets/d/17I_0q8tylk9Q_Y3GTSq738KkBIoS6SUt1quR5lPPAdg/edit#gid=0)
   
 ### Possible Division Of Labor
-Team leader 0: set up team resources (slack channel, repository, etc),
-              documentation, coordination, and programming support if needed.
-Team member 1: waypoint updater
-Team member 2: traffic light detector
-Team member 3: drive-by-wire controller
-Team member 4: testing
+* Team leader 0: set up team resources (slack channel, repository, etc),
+              documentation, coordination, testing, and programming support if needed.
+* Team member 1 & 2: waypoint updater
+* Team member 3: traffic light detector
+* Team member 4: drive-by-wire controller
 
 ## Project Components
 
