@@ -8,7 +8,18 @@ Slack channel - *#ateam*
 
 ### Schedule
 
-Project Due: **2017-10-06** <- Is this correct? It says "Due in 1 month" on 2017-09-06.
+Project Due:
+
+**2017-10-06**
+Is this correct? It says ```Due in 1 month``` on 2017-09-06.
+
+*OR* 
+
+**2017-10-02**
+It says ```Due in 25 days``` on 2017-09-07.
+
+It also says...
+```This term ends on Oct 16th```
 
 ```
    September 2017         October 2017      
