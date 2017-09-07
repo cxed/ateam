@@ -66,6 +66,10 @@ Slack channel - *#ateam*
 * [Starter Repo](https://github.com/udacity/CarND-System-Integration)
 * [ROS Twist](http://docs.ros.org/jade/api/geometry_msgs/html/msg/Twist.html)
 
+### Notable Slack Channels
+* _#p-system-integration_ - Seems to be where this project is being discussed.
+* _#sdc-ros_ - ROS topics.
+
 
 ![PID Tuning](http://support.motioneng.com/Downloads-Notes/Tuning/images/overshoot_flowchart.gif "PID Tuning")
 
