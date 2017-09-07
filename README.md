@@ -3,10 +3,25 @@ A Team - System Integration Project
 
 Udacity Term 3 Final Capstone Project
 
-Due: *2017-10-06* <- Is this correct? It says "Due in 1 month" on 2017-09-06.
-
 ## The A Team
 Slack channel - *#ateam*
+
+### Schedule
+
+Project Due: **2017-10-06** <- Is this correct? It says "Due in 1 month" on 2017-09-06.
+
+```
+   September 2017         October 2017      
+Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa  
+                1  2   1  2  3  4  5  6  7  
+ 3  4  5  6  7  8  9   8  9 10 11 12 13 14  
+10 11 12 13 14 15 16  15 16 17 18 19 20 21  
+17 18 19 20 21 22 23  22 23 24 25 26 27 28  
+24 25 26 27 28 29 30  29 30 31 
+```
+
+### Skype Call
+**Proposed** 2017-09-10 1500UTC=0800PDT=1700U+2
 
 ### Members
   - 0 Chris _@cxed_ UTC-7
@@ -16,7 +31,7 @@ Slack channel - *#ateam*
   - 4 Markus _@markus.meyerhofer_ UTC+2
 
 [Team Sign Up Spreadsheet](https://docs.google.com/spreadsheets/d/17I_0q8tylk9Q_Y3GTSq738KkBIoS6SUt1quR5lPPAdg/edit#gid=0)
-  
+
 ### Possible Division Of Labor
 * Team leader 0:
   - set up team resources (slack channel, repository, etc),
@@ -52,7 +67,7 @@ Slack channel - *#ateam*
 
 ## TODO
 1. The Waypoint Updater Node seems to be a prerequisite to many other components
-  so it is recommended to work on it first.
+   so it is recommended to work on it first.
 2. DBW (Drive By Wire) Node
 3. Traffic Light Detection
 4. Waypoint Updater Node - full functionality.
@@ -70,3 +85,18 @@ Slack channel - *#ateam*
 ### Notable Slack Channels
 * _#p-system-integration_ - Seems to be where this project is being discussed.
 * _#sdc-ros_ - ROS topics.
+
+## Interesting Chatter From Forums/Slack
+Seems like this could go sideways easily. Let's be careful to double
+check degrees/radians and get consistent.
+
+> Seems that `waypoint_loader.py` is feeding degrees to
+> `quaternion_from_euler` which expects radians… and `bridge.py` is
+> feeding radians to `create_light` which expects degrees.
+> --   #davidm 2017-09-07
+
+And in a similar theme...
+
+> probably the simulator calculates in kmh, displays in mph and wants
+> data in mps
+> -- #kostas.oreopoulos 2017-09-07
