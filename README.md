@@ -1,7 +1,7 @@
 A Team - System Integration Project 
 ===================================
 
-![A Team](./ateamlogo.png "There is no Plan B.")
+![A Team](imgs/ateamlogo.png "There is no Plan B.")
 
 Udacity Term 3 Final Capstone Project
 
@@ -59,6 +59,8 @@ Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa
 ## Project Components
 
 ### Nodes
+![System Diagram](imgs/final-project-ros-graph-v2.png "System Diagram")
+
 #### Perception
 * Traffic light detection
 * Obstacle detection
@@ -98,6 +100,7 @@ Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa
 ### Notable Slack Channels
 * _#p-system-integration_ - Seems to be where this project is being discussed.
 * _#sdc-ros_ - ROS topics.
+* [Discussion Forum - System Integration](https://discussions.udacity.com/c/nd013-system-integration)
 
 ## Interesting Chatter From Forums/Slack
 Seems like this could go sideways easily. Let's be careful to double
@@ -113,3 +116,5 @@ And in a similar theme...
 > probably the simulator calculates in kmh, displays in mph and wants
 > data in mps
 > -- #kostas.oreopoulos 2017-09-07
+
+[?](https://discussions.udacity.com/t/units-for-ros-topics-in-the-final-project/360954/1)
