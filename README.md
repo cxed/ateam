@@ -11,17 +11,9 @@ Slack channel - *#ateam*
 ### Schedule
 
 Project Due:
-
-**2017-10-06**
-Is this correct? It says ```Due in 1 month``` on 2017-09-06.
-
-*OR* 
-
 **2017-10-02**
-It says ```Due in 25 days``` on 2017-09-07.
 
-It also says...
-```This term ends on Oct 16th```
+Term Ends: 2017-10-16
 
 ```
    September 2017         October 2017      
@@ -34,7 +26,7 @@ Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa
 ```
 
 ### Skype Call
-**Proposed** 2017-09-10 1500UTC=0800PDT=1700U+2
+**Success!** 2017-09-10 1500UTC=0800PDT=1700U+2
 
 ### Members
   - 0 Chris _@cxed_ UTC-7
@@ -47,14 +39,15 @@ Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa
 
 ### Possible Division Of Labor
 * Team leader 0:
-  - set up team resources (slack channel, repository, etc),
+  - set up team resources (Slack, GitHub, Skype, etc),
   - documentation
   - coordination
   - testing
   - programming support
-* Team member 1 & 2: waypoint updater
-* Team member 3: traffic light detector
-* Team member 4: drive-by-wire controller
+* Vince & William: waypoint updater a.k.a. getting the car moving at all.
+  - Hey guys, add your own details by modifying this section!
+* Andreas & Markus: tl_detector, working on the classifier.
+  - Hey guys, add your own details by modifying this section!
 
 ## Project Components
 
