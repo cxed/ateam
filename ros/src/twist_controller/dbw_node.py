@@ -16,7 +16,7 @@ You can subscribe to any other message that you find important or refer to the d
 of messages subscribed to by the reference implementation of this node.
 
 One thing to keep in mind while building this node and the `twist_controller` class is the status
-of `dbw_enabled`. While in the simulator, its enabled all the time, in the real car, that will
+of `dbw_enabled`. While in the simulator, it's enabled all the time, in the real car, that will
 not be the case. This may cause your PID controller to accumulate error because the car could
 temporarily be driven by a human instead of your controller.
 
@@ -80,7 +80,7 @@ class DBWNode(object):
             # /dbw_node/wheel_radius: 0.335
             # Carla = https://en.wikipedia.org/wiki/Lincoln_MKZ
             # Curb weight = 3,713-3,911 lb (1,684-1,774 kg)
-            # (Chris calculated the wheel radius to be .340m, so its close.)
+            # (Chris calculated the wheel radius to be .340m, so it's close.)
             brake = 0
             steer = 0
             self.publish(throttle, brake, steer)
