@@ -72,7 +72,18 @@ class DBWNode(object):
             #                                                     <any other argument you need>)
             # if <dbw is enabled>:
             #   self.publish(throttle, brake, steer)
-            self.publish(0.2, 0., 0.)
+            throttle = 0.5 # Range 0 to 1.
+            # Official docs say: "...units of torque (N*m). The correct values
+            # for brake can be computed using the desired acceleration, weight
+            # of the vehicle, and wheel radius."
+            # /dbw_node/vehicle_mass: 1080.0
+            # /dbw_node/wheel_radius: 0.335
+            # Carla = https://en.wikipedia.org/wiki/Lincoln_MKZ
+            # Curb weight = 3,713-3,911 lb (1,684-1,774 kg)
+            # (Chris calculated the wheel radius to be .340m, so its close.)
+            brake = 0
+            steer = 0
+            self.publish(throttle, brake, steer)
             rate.sleep()
 
     def publish(self, throttle, brake, steer):
