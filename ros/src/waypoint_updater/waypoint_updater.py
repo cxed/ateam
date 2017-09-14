@@ -82,8 +82,13 @@ class WaypointUpdater(object):
 
             
             # set up the next waypoints
-            # TODO make it circlic
-            infront_waypoints = self.base_waypoints[idx: idx + LOOKAHEAD_WPS]
+            start_idx = idx
+            end_idx = (start_idx + LOOKAHEAD_WPS) % len(self.base_waypoints)
+            if end_idx > start_idx:
+                infront_waypoints = self.base_waypoints[start_idx:end_idx]
+            else:
+                # wrap around end of list
+                infront_waypoints = self.base_waypoints[start_idx:] + self.base_waypoints[:end_idx]
 
             # set the speed
             for infront_waypoint in infront_waypoints:
