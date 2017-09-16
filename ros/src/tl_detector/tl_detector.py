@@ -68,7 +68,7 @@ class TLDetector(object):
 
     def traffic_cb(self, msg):
 
-	if(self.simulator_debug_mode==0):
+	if(self.simulator_debug_mode==1):
         	self.lights = msg.lights
         	light_wp, state = self.process_traffic_lights_simulation()
 
