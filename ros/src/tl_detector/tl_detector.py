@@ -67,7 +67,28 @@ class TLDetector(object):
         self.base_waypoints_sub.unregister()
 
     def traffic_cb(self, msg):
-        self.lights = msg.lights
+
+	if(self.simulator_debug_mode==0):
+        	self.lights = msg.lights
+        	light_wp, state = self.process_traffic_lights_simulation()
+
+        	'''
+        	Publish upcoming red lights at camera frequency.
+        	Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
+        	of times till we start using it. Otherwise the previous stable 	state is
+        	used.
+        	'''
+		if self.state != state:
+		    self.state_count = 0
+		    self.state = state
+		elif self.state_count >= STATE_COUNT_THRESHOLD:
+		    self.last_state = self.state
+		    light_wp = light_wp if state == TrafficLight.RED else -1
+		    self.last_wp = light_wp
+		    self.upcoming_red_light_pub.publish(Int32(light_wp))
+		else:
+		    self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+		self.state_count += 1
 
     def image_cb(self, msg):
         """Identifies red lights in the incoming camera image and publishes the index
@@ -77,27 +98,28 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
-        self.has_image = True
-        self.camera_image = msg
-        light_wp, state = self.process_traffic_lights()
+	if(self.simulator_debug_mode==0):
+        	self.has_image = True
+        	self.camera_image = msg
+        	light_wp, state = self.process_traffic_lights()
 
-        '''
-        Publish upcoming red lights at camera frequency.
-        Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-        of times till we start using it. Otherwise the previous stable state is
-        used.
-        '''
-        if self.state != state:
-            self.state_count = 0
-            self.state = state
-        elif self.state_count >= STATE_COUNT_THRESHOLD:
-            self.last_state = self.state
-            light_wp = light_wp if state == TrafficLight.RED else -1
-            self.last_wp = light_wp
-            self.upcoming_red_light_pub.publish(Int32(light_wp))
-        else:
-            self.upcoming_red_light_pub.publish(Int32(self.last_wp))
-        self.state_count += 1
+        	'''
+        	Publish upcoming red lights at camera frequency.
+        	Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
+        	of times till we start using it. Otherwise the previous stable 	state is
+        	used.
+        	'''
+		if self.state != state:
+		    self.state_count = 0
+		    self.state = state
+		elif self.state_count >= STATE_COUNT_THRESHOLD:
+		    self.last_state = self.state
+		    light_wp = light_wp if state == TrafficLight.RED else -1
+		    self.last_wp = light_wp
+		    self.upcoming_red_light_pub.publish(Int32(light_wp))
+		else:
+		    self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+		self.state_count += 1
         
     #Newly introduced function calculating a normal beeline distance
     def distance(self, p1, p2):
@@ -250,7 +272,7 @@ class TLDetector(object):
         """
         light = None
 
-        #TODO -  - find the closest visible traffic light (if one exists)
+        #TODO - DONE - find the closest visible traffic light (if one exists)
         
         #Find where the vehicle is and safe it in car position
         light_positions = self.config['light_positions']
@@ -263,16 +285,17 @@ class TLDetector(object):
         light_pos_wp = []
         if self.waypoints is not None:
             wp = self.waypoints
-            for light_position in light_positions:
+            for i in range(len(light_positions)):
                 # FIX: See note in get_closest_waypoint_light. l_pos can't be a list!
                 # cxe: I just changed distance function to handle both. Maybe a bad idea.
-                l_pos = self.get_closest_waypoint_light(wp, light_position)
+		# AJankl: Put it back to the state from my implmentation lpos is not a list cause it says light_positions[i] so its only one element of the array
+                l_pos = self.get_closest_waypoint_light(wp, light_positions[i])
                 light_pos_wp.append(l_pos)
             self.last_light_pos_wp = light_pos_wp
         else:
             light_pos_wp = self.last_light_pos_wp
             
-        # valtgun get id of next light
+        # Get the id of the next light
         if self.last_car_position > max(light_pos_wp):
              light_num_wp = min(light_pos_wp)
         else:
@@ -287,19 +310,76 @@ class TLDetector(object):
         #light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
         light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
         
+	#Fix changed handling of simulator. Not being done in this function anymore
         if light:
             if light_distance >= self.IGNORE_FAR_LIGHT:
                 return -1, TrafficLight.UNKNOWN
             else:
-                if self.simulator_debug_mode == 0:
-                    simulated_light_number = None
-                    for thislight in self.lights:
-                        if (self.distance(light, thislight.pose.pose.position)<1.0):
-                            state = thislight.state
-                            return light_num_wp, state
-                    return -1, TrafficLight.UNKNOWN
-                else:
-                    state = self.get_light_state(light)
+                state = self.get_light_state(light)
+                return light_num_wp, state
+            
+        self.waypoints = None
+        return -1, TrafficLight.UNKNOWN
+
+    def process_traffic_lights_simulation(self):
+        """Finds closest visible traffic light, if one exists, and determines its
+            location and color
+
+        Returns:
+            int: index of waypoint closes to the upcoming traffic light (-1 if none exists)
+            int: ID of traffic light color (specified in styx_msgs/TrafficLight)
+
+        """
+        light = None
+
+        #TODO - DONE - find the closest visible traffic light (if one exists)
+        
+        #Find where the vehicle is and safe it in car position
+        light_positions = []
+
+	for i in range (len(self.lights)):
+		light_positions.append(self.lights[i].pose.pose)
+
+        if self.pose:
+            car_position = self.get_closest_waypoint(self.pose.pose)
+            if car_position is not None:
+                self.last_car_position = car_position
+        
+        # Attribute the light positions to waypoints
+        light_pos_wp = []
+        if self.waypoints is not None:
+            wp = self.waypoints
+            for i in range(len(light_positions)):
+                # FIX: See note in get_closest_waypoint_light. l_pos can't be a list!
+                # cxe: I just changed distance function to handle both. Maybe a bad idea.
+		# AJankl: Put it back to the state from my implmentation lpos is not a list cause it says light_positions[i] so its only one element of the array
+                l_pos = self.get_closest_waypoint_light(wp, light_positions[i])
+                light_pos_wp.append(l_pos)
+            self.last_light_pos_wp = light_pos_wp
+        else:
+            light_pos_wp = self.last_light_pos_wp
+            
+        # Get the id of the next light
+        if self.last_car_position > max(light_pos_wp):
+             light_num_wp = min(light_pos_wp)
+        else:
+            light_delta = light_pos_wp[:]
+            light_delta[:] = [x - self.last_car_position for x in light_delta]
+            light_num_wp = min(i for i in light_delta if i > 0) + self.last_car_position
+
+        light_idx = light_pos_wp.index(light_num_wp)
+        light = light_positions[light_idx]
+        
+        # FIX: distance_light does not seem to be defined.
+        #light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+        light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+        
+	#Fix changed handling of simulator. Not being done in this function anymore
+        if light:
+            if light_distance >= self.IGNORE_FAR_LIGHT:
+                return -1, TrafficLight.UNKNOWN
+            else:
+                state = self.lights[light_idx].state
                 return light_num_wp, state
             
         self.waypoints = None
