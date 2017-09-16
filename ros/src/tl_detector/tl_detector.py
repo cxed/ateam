@@ -101,6 +101,17 @@ class TLDetector(object):
 
         """
         #TODO implement
+        best_waypoint = self.best_waypoint        
+        if self.waypoints is not None:            
+            waypoints = self.waypoints.waypoints            
+            min_dist = self.distance(pose.position, waypoints[0].pose.pose.position)            
+            for i, point in enumerate(waypoints):                
+                dist = self.distance(pose.position, point.pose.pose.position)                
+                if dist < min_dist:                    
+                    best_waypoint = i                    
+                    min_dist = dist            
+                    self.best_waypoint = best_waypoint            
+        return best_waypoint
         return 0
 
 
