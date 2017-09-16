@@ -334,12 +334,12 @@ class TLDetector(object):
 
         #TODO - DONE - find the closest visible traffic light (if one exists)
         
-        #Find where the vehicle is and safe it in car position
+	#Get the traffic light positions not from the config but from the vehicle/traffic_lights topic
         light_positions = []
-
-	for i in range (len(self.lights)):
+	for i in range(len(self.lights)):
 		light_positions.append(self.lights[i].pose.pose)
 
+        #Find where the vehicle is and safe it in car position
         if self.pose:
             car_position = self.get_closest_waypoint(self.pose.pose)
             if car_position is not None:
