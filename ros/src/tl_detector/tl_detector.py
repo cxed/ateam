@@ -337,7 +337,7 @@ class TLDetector(object):
 	#Get the traffic light positions not from the config but from the vehicle/traffic_lights topic
         light_positions = []
 	for i in range(len(self.lights)):
-		light_positions.append(self.lights[i].pose.pose)
+		light_positions.append(self.lights[i].pose.pose.position)
 
         #Find where the vehicle is and safe it in car position
         if self.pose:
