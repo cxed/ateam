@@ -33,7 +33,7 @@ class WaypointUpdater(object):
         rospy.init_node('waypoint_updater')
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
-        rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
+        self.base_waypoints_sub = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
@@ -160,7 +160,8 @@ class WaypointUpdater(object):
     def waypoints_cb(self, waypoints):
         self.current_waypoints = waypoints.waypoints
         self.next_waypoint_index = None
-        #pass
+        # we only need the message once, unsubscribe as soon as we got the message
+        self.base_waypoints_sub.unregister()
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
