@@ -85,10 +85,19 @@ class DBWNode(object):
         # for brake can be computed using the desired acceleration, weight
         # of the vehicle, and wheel radius."
         # /dbw_node/vehicle_mass: 1080.0
-        # /dbw_node/wheel_radius: 0.335
         # Carla = https://en.wikipedia.org/wiki/Lincoln_MKZ
         # Curb weight = 3,713-3,911 lb (1,684-1,774 kg)
-        # (Chris calculated the wheel radius to be .340m, so it's close.)
+        # Decel_Force(newtons) = Mass_car(kg) * Max_decel(meter/s^2) 
+        # MaxBrakeTorque(newton*meter) = Decel_Force(newtons) * wheel_radius(meters) / 4 wheels
+        # MaxBrakeTorque(newton*meter) = Mass_car(kg) * Max_decel(meter/s^2) * wheel_radius(meters) / 4 wheels
+        # 726 g/L density of gas. 13.5gal=51.1Liters, max fuel mass=37.1kg
+        # 4 passengers = 280 kg
+        # Let's just say 2000kg for a deployed car.
+        # Note that rospy.get_param('~wheel_radius', 0.2413) but...
+        # /dbw_node/wheel_radius: 0.335
+        # (Chris independently calculated the wheel radius to be .340m, so let's go with .335)
+        # MaxBrakeTorque(newton*meter) = 2000(kg) * 5(meter/s^2) * .335(meters) / 4 wheels
+        # MaxBrakeTorque= 837.5Nm
 
         rate = rospy.Rate(self.refresh_rate)
         while not rospy.is_shutdown():
