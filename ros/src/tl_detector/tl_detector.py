@@ -48,6 +48,12 @@ class TLDetector(object):
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
+		
+		self.best_waypoint = 0
+		self.last_car_position = 0
+        self.last_light_pos_wp = []
+        self.IGNORE_FAR_LIGHT = 100.0
+		self.simulator_debug_mode = 0
 
         rospy.spin()
 
@@ -91,6 +97,12 @@ class TLDetector(object):
         else:
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
         self.state_count += 1
+		
+	#Newly introduced function calculating a normal beeline distance
+	def distance(self, p1, p2):
+		delta_x = p1.x - p2.x
+		delta_y = p1.y - p2.y
+		return math.sqrt(delta_x*delta_x + delta_y*delta_y)	
 
     def get_closest_waypoint(self, pose):
         """Identifies the closest path waypoint to the given position
@@ -102,10 +114,19 @@ class TLDetector(object):
             int: index of the closest waypoint in self.waypoints
 
         """
-        #TODO implement
-        return 0
-
-
+        #TODO - DONE - return the nearest waypoint for given position
+		best_waypoint = self.best_waypoint
+		if self.waypoints is not None:
+			waypoints = self.waypoints.waypoints
+			min_dist = self.distance(pose.position, waypoints[0].pose.pose.position)
+			for i, point in enumerate(waypoints):
+				dist = self.distance(pose.position, point.pose.pose.position)
+				if dist < min_dist:
+					best_waypoint = i
+					min_dist = dist
+		self.best_waypoint = best_waypoint
+        return best_waypoint
+		
     def project_to_image_plane(self, point_in_world):
         """Project point from 3D world coordinates to 2D camera image location
 
@@ -135,10 +156,39 @@ class TLDetector(object):
         except (tf.Exception, tf.LookupException, tf.ConnectivityException):
             rospy.logerr("Failed to find camera to map transform")
 
-        #TODO Use tranform and rotation to calculate 2D position of light in image
+        #TODO - DONE - Use tranform and rotation to calculate 2D position of light in image
 
-        x = 0
-        y = 0
+        # From quaternion to Euler angles:
+        x = self.pose.pose.orientation.x
+        y = self.pose.pose.orientation.y
+        z = self.pose.pose.orientation.z
+        w = self.pose.pose.orientation.w
+		
+        # Determine car heading:
+        t3 = +2.0 * (w * z + x*y)
+        t4 = +1.0 - 2.0 * (y*y + z*z)
+        theta = math.degrees(math.atan2(t3, t4))
+
+        Xcar = (cord_y-self.pose.pose.position.y)*math.sin(math.radians(theta))-(self.pose.pose.position.x-cord_x)*math.cos(math.radians(theta))
+        Ycar = (cord_y-self.pose.pose.position.y)*math.cos(math.radians(theta))-(cord_x-self.pose.pose.position.x)*math.sin(math.radians(theta))
+
+        self.distance_to_light = Xcar
+        self.deviation_of_light = Ycar
+
+        objectPoints = np.array([[float(Xcar), float(Ycar), 0.0]], dtype=np.float32)
+
+        rvec = (0,0,0)
+        tvec = (0,0,0)
+
+        cameraMatrix = np.array([[fx,  0, image_width/2],
+                                [ 0, fy, image_height/2],
+                                [ 0,  0,  1]])
+        distCoeffs = None
+
+        ret, _ = cv2.projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs)
+
+        x = int(ret[0,0,0])
+        y = int(ret[0,0,1])
 
         return (x, y)
 
@@ -160,10 +210,17 @@ class TLDetector(object):
 
         x, y = self.project_to_image_plane(light.pose.pose.position)
 
-        #TODO use light location to zoom in on traffic light in image
+        #TODO - DONE - use light location to zoom in on traffic light in image
+		
+		if ((x is None) or (y is None) or (x < 0) or (y<0) or
+            (x>self.config['camera_info']['image_width']) or (y>self.config['camera_info']['image_height'])):
+            return TrafficLight.UNKNOWN
+        else:
+			# Cropped for the classifier from Markus which would need to ingest bgr8 images that are of size 300x200 (Can be changed if needed)
+            cropped_image = cv2.resize(cv_image,(300, 200), interpolation = cv2.INTER_CUBIC)
 
         #Get classification
-        return self.light_classifier.get_classification(cv_image)
+        return self.light_classifier.get_classification(cropped_image)
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
@@ -175,17 +232,68 @@ class TLDetector(object):
 
         """
         light = None
-        light_positions = self.config['light_positions']
+
+        #TODO -  - find the closest visible traffic light (if one exists)
+		
+		#Find where the vehicle is and safe it in car position
+		light_positions = self.config['light_positions']
         if(self.pose):
             car_position = self.get_closest_waypoint(self.pose.pose)
+			if car_position is not None:
+				self.last_car_position = car_position
+		
+		# Attribute the light positions to waypoints
+        light_pos_wp = []
+        if self.waypoints is not None:
+            wp = self.waypoints
+            for i in range(len(light_positions)):
+                l_pos = self.get_closest_waypoint_light(wp, light_positions[i])
+                light_pos_wp.append(l_pos)
+            self.last_light_pos_wp = light_pos_wp
+        else:
+            light_pos_wp = self.last_light_pos_wp
+			
+		# valtgun get id of next light
+        if (self.last_car_position > max(light_pos_wp)):
+             light_num_wp = min(light_pos_wp)
+        else:
+            light_delta = light_pos_wp[:]
+            light_delta[:] = [x - self.last_car_position for x in light_delta]
+            light_num_wp = min(i for i in light_delta if i > 0) + self.last_car_position
 
-        #TODO find the closest visible traffic light (if one exists)
+        light_idx = light_pos_wp.index(light_num_wp)
+        light = light_positions[light_idx]
 
+        light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+		
         if light:
-            state = self.get_light_state(light)
-            return light_wp, state
+            if (light_distance >= self.IGNORE_FAR_LIGHT):
+                return -1, TrafficLight.UNKNOWN
+            else:
+				if self.simulator_debug_mode == 0:
+					simulated_light_number = None
+					for i in len(self.lights):
+						if (self.distance(light, self.lights[i].pose.pose.position)<1.0):
+							state = self.lights[i].state
+							return light_num_wp, state
+					return -1, TrafficLight.UNKNOWN
+				else:
+					state = self.get_light_state(light)
+                return light_num_wp, state
+			
         self.waypoints = None
         return -1, TrafficLight.UNKNOWN
+		
+    def get_closest_waypoint_light(self, wp, l_pos):
+        best_waypoint = None
+        waypoints = wp.waypoints
+        min_dist = self.distance(l_pos, waypoints[0].pose.pose.position)
+        for i, point in enumerate(waypoints):
+            dist = self.distance(l_pos, point.pose.pose.position)
+            if dist < min_dist:
+                best_waypoint = i
+                min_dist = dist
+        return best_waypoint
 
 if __name__ == '__main__':
     try:
