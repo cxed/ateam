@@ -101,6 +101,7 @@ class TLDetector(object):
         
     #Newly introduced function calculating a normal beeline distance
     def distance(self, p1, p2):
+        assert hasattr(p1,'x') and hasattr(p1,'y') and hasattr(p2,'x') and hasattr(p2,'y')
         delta_x = p1.x - p2.x
         delta_y = p1.y - p2.y
         return math.sqrt(delta_x*delta_x + delta_y*delta_y)	
@@ -248,6 +249,7 @@ class TLDetector(object):
         if self.waypoints is not None:
             wp = self.waypoints
             for i in range(len(light_positions)):
+                # FIX: See note in get_closest_waypoint_light. l_pos can't be a list!
                 l_pos = self.get_closest_waypoint_light(wp, light_positions[i])
                 light_pos_wp.append(l_pos)
             self.last_light_pos_wp = light_pos_wp
@@ -288,6 +290,8 @@ class TLDetector(object):
     def get_closest_waypoint_light(self, wp, l_pos):
         best_waypoint = None
         waypoints = wp.waypoints
+        # l_pos should not be a list. 
+        # The second arg, waypoints[0].pose.pose.position is type: geometry_msgs.msg._Point.Point
         min_dist = self.distance(l_pos, waypoints[0].pose.pose.position)
         for i, point in enumerate(waypoints):
             dist = self.distance(l_pos, point.pose.pose.position)
