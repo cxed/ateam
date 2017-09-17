@@ -172,7 +172,59 @@ class TLDetector(object):
                     min_dist = dist
         self.best_waypoint = best_waypoint
         return best_waypoint
-        
+
+    def project_to_image_plane_2(self, point_in_world):
+        """Project point from 3D world coordinates to 2D camera image location
+
+        Args:
+            point_in_world (Point): 3D location of a point in the world
+
+        Returns:
+            x (int): x coordinate of target point in image
+            y (int): y coordinate of target point in image
+
+        """
+
+        fx = self.config['camera_info']['focal_length_x']
+        fy = self.config['camera_info']['focal_length_y']
+        image_width = self.config['camera_info']['image_width']
+        image_height = self.config['camera_info']['image_height']
+
+        # get transform between pose of camera and world frame
+        trans = None
+        try:
+            now = rospy.Time.now()
+            self.listener.waitForTransform("/base_link",
+                  "/world", now, rospy.Duration(1.0))
+            (trans, rot) = self.listener.lookupTransform("/base_link",
+                  "/world", now)
+
+        except (tf.Exception, tf.LookupException, tf.ConnectivityException):
+            rospy.logerr("Failed to find camera to map transform")
+
+        #TODO Use tranform and rotation to calculate 2D position of light in image
+        # Variable Naming Note: Abc --> A=object (Car or stopLight), b=coord system (world,zeroed,car), c=geom variable
+        #======== TODO: Need to get this information out of the input argument.
+        Lwx,Lwy,Lwz = EXTRACT_LIGHT_WORLD_LOCATION_FROM_INPUT(point_in_world)
+        #======== TODO: Need to get this information out of its ROS package?
+        Cwx,Cwy,Cwz,Cwtheta = CAR_WORLD_LOCATION_AND_HEADING # Cwtheta in radians!
+        L0x,L0y,L0z = Lwx-Cwx,Lwy-Cwy,Lwz-Cwz # Stoplight position for coords moved so car is at 0,0,0.
+        # Maybe check for L0y=0 conditions, already lined up (ahead or behind).
+        Lctheta = math.atan2(L0y,L0x) # Direction (radians) from car to stoplight when car is at 0,0,0.
+        LcR = math.sqrt(L0x*L0x + L0y*L0y) # Distance from stoplight to car.
+        Lcphi = Lctheta-Cwtheta # Angle between car bearing and angle to stoplight.
+        Lcx= LcR * math.cos(Lcphi) # How far stoplight is ahead of car.
+        Lcy= LcR * math.sin(Lcphi) # How far stoplight is laterally over from car's current path.
+        hw,hh= image_width/2, image_height/2 # Screen half width and half height.
+        if Lcx<0 or x<-hw or x>hw or y<-hh or y>hh:
+            return False #???? Or (-1,-1), basically, it's not on the screen.
+        else:
+            # Simple screen projection given aligned system.
+            # https://en.wikipedia.org/wiki/3D_projection
+            y = hh + int(fy*L0z/Lcx) # Screen vertical = focal_len_vert * stoplight_dist_high / stoplight_dist_ahead
+            x = hw + int(fx*Lcy/Lcx) # Screen horiz = focal_len_horiz * stoplight_dist_over / stoplight_dist_ahead
+            return (x,y)
+
     def project_to_image_plane(self, point_in_world):
         """Project point from 3D world coordinates to 2D camera image location
 
@@ -209,6 +261,7 @@ class TLDetector(object):
         y = self.pose.pose.orientation.y
         z = self.pose.pose.orientation.z
         w = self.pose.pose.orientation.w
+        print(x,y,z,w)
         
         # Determine car heading:
         t3 = +2.0 * (w * z + x*y)
