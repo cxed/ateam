@@ -29,11 +29,10 @@ class Controller(object):
         # for velocity, clamp the output to minimum 0 and maximum MAX_SPEED
         self.linear_velocity_PID = PID(1.0, 0.1, 0.5, mn=0, mx=MAX_SPEED)
 
-        # TODO commented out because this does not work yet
-        
         # for steering, clamp the output to +- 25 degrees (in radians)
-        self.angular_velocity_PID = PID(10.0, 0.1,0.5,mn=-MAX_STEERING, mx=MAX_STEERING)
-        # create a yaw controller
+        self.angular_velocity_PID = PID(5.0, 0.1,0.5,mn=-MAX_STEERING, mx=MAX_STEERING)
+        
+	# create a yaw controller
         self.yaw_controller = YawController(self.wheel_base, self.steer_ratio, self.min_speed, self.max_lat_accel, self.max_steer_angle)
         
 
@@ -50,21 +49,19 @@ class Controller(object):
     	# pass the error to the PID controller, with a sample time of 1 / refresh_rate
     	throttle_cmd = self.linear_velocity_PID.step(velocity_error, 1.0 / self.refresh_rate)
 
-        #rospy.logerr('Current angular velocity: ' + str(current_angular_velocity))
-
     	# then limit the acceleration
     	# TODO can also put this into a PID for smoother acceleration
     	# TODO graph the variables to see how they are changing in rqt_graph
     	acceleration = throttle_cmd - current_linear_velocity
     	throttle = min(acceleration, self.accel_limit)
+    	
+	# Obtain the two components for the steering
+    	corrective_steer = self.yaw_controller.get_steering(target_linear_velocity, target_angular_velocity, current_linear_velocity)
+        predictive_steer = self.angular_velocity_PID.step(target_angular_velocity, 1.0 / self.refresh_rate)
 
-		#TODO - commented out because this does not work yet
-		# get the desired steering angle
-    	steer = self.yaw_controller.get_steering(target_linear_velocity, target_angular_velocity, current_linear_velocity)
-
-    	# want to minimise the steering angle so that the error is zero
-    	#steer = self.angular_velocity_PID.step(target_angular_velocity, 1.0 / self.refresh_rate)
-        #throttle = 0
-        # steer = 0
+	# add the two components to produce final steer value
+        steer = corrective_steer + predictive_steer
+	
+	# TODO implement braking
         brake = 0
         return throttle, brake, steer
