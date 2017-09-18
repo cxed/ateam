@@ -41,8 +41,8 @@ class TLDetector(object):
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
         # A publisher to show us the cropped images. Maybe disable when no longer needed.
-        # What's the MESSAGE_TYPE?
-        #self.cropped_pub =            rospy.Publisher("/crop_image",MESSAGE_TYPE, queue_size=2) 
+        # Refer to styx/conf.py for more hints.
+        #self.cropped_pub =            rospy.Publisher("/crop_image",image, queue_size=2) 
 
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
@@ -206,6 +206,9 @@ class TLDetector(object):
             rospy.logerr("Failed to find camera to map transform")
 
         #TODO Use tranform and rotation to calculate 2D position of light in image
+        # Ouch... Then there's this:
+        # https://discussions.udacity.com/t/focal-length-wrong/358568/12
+
         # Variable Naming Note: Abc --> A=object (Car or stopLight), b=coord system (world,zeroed,car), c=geom variable
         #======== TODO: Need to get this information out of the input argument.
         Lwx,Lwy,Lwz = EXTRACT_LIGHT_WORLD_LOCATION_FROM_INPUT(point_in_world)
@@ -320,7 +323,7 @@ class TLDetector(object):
         else:
             # Cropped for the classifier from Markus which would need to ingest bgr8 images that are of size 300x200 (Can be changed if needed)
             cropped_image = cv2.resize(cv_image,(300, 200), interpolation = cv2.INTER_CUBIC)
-            # A publisher to show the cropped images.
+            # A publisher to show the cropped images. Enable definition in __init__ also.
             #self.cropped_pub.publish(cropped_image)
             
 
