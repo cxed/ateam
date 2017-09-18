@@ -11,6 +11,8 @@ from light_classification.tl_classifier import TLClassifier
 import tf
 import cv2
 import yaml
+import numpy as np
+import time
 
 STATE_COUNT_THRESHOLD = 3
 
@@ -57,7 +59,7 @@ class TLDetector(object):
         self.last_car_position = 0
         self.last_light_pos_wp = []
         self.IGNORE_FAR_LIGHT = 100.0
-        self.simulator_debug_mode = 1
+        self.simulator_debug_mode = 0
 
         rospy.spin()
 
@@ -176,6 +178,25 @@ class TLDetector(object):
         self.best_waypoint = best_waypoint
         return best_waypoint
 
+	#AJankl copied this function from: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+    def Quaternion_toEulerianAngle(self, x, y, z, w):
+	ysqr = y*y
+	
+	t0 = +2.0 * (w * x + y*z)
+	t1 = +1.0 - 2.0 * (x*x + ysqr)
+	X = math.degrees(math.atan2(t0, t1))
+
+	t2 = +2.0 * (w*y - z*x)
+	t2 =  1 if t2 > 1 else t2
+	t2 = -1 if t2 < -1 else t2
+	Y = math.degrees(math.asin(t2))
+
+	t3 = +2.0 * (w * z + x*y)
+	t4 = +1.0 - 2.0 * (ysqr + z*z)
+	Z = math.degrees(math.atan2(t3, t4))
+
+	return Z 
+
     def project_to_image_plane_2(self, point_in_world):
         """Project point from 3D world coordinates to 2D camera image location
 
@@ -210,11 +231,18 @@ class TLDetector(object):
         # https://discussions.udacity.com/t/focal-length-wrong/358568/12
 
         # Variable Naming Note: Abc --> A=object (Car or stopLight), b=coord system (world,zeroed,car), c=geom variable
-        #======== TODO: Need to get this information out of the input argument.
-        Lwx,Lwy,Lwz = EXTRACT_LIGHT_WORLD_LOCATION_FROM_INPUT(point_in_world)
-        #======== TODO: Need to get this information out of its ROS package?
-        Cwx,Cwy,Cwz,Cwtheta = CAR_WORLD_LOCATION_AND_HEADING # Cwtheta in radians! Use self.pose somehow.
-        L0x,L0y,L0z = Lwx-Cwx,Lwy-Cwy,Lwz-Cwz # Stoplight position for coords moved so car is at 0,0,0.
+        #======== DONE: Need to get this information out of the input argument.
+        Lwx,Lwy,Lwz = point_in_world[0], point_in_world[1], 0
+        #======== DONE: Need to get this information out of its ROS package?
+        Cwx,Cwy,Cwz = self.pose.pose.position.x, self.pose.pose.position.y, self.pose.pose.position.z 
+	#AJankl calculated this via converting a quaternion to euler angles
+	x_=self.pose.pose.orientation.x
+	y_=self.pose.pose.orientation.y
+	z_=self.pose.pose.orientation.z
+	w_=self.pose.pose.orientation.w
+	Cwtheta = math.radians(self.Quaternion_toEulerianAngle(x_,y_,z_,w_)) # Cwtheta in radians! Used quaternion conversion for this
+        #L0x,L0y,L0z = Lwx-Cwx,Lwy-Cwy,Lwz-Cwz # Stoplight position for coords moved so car is at 0,0,0.
+        L0x,L0y,L0z = Lwx-Cwx,Lwy-Cwy,0 # Stoplight position for coords moved so car is at 0,0,0.
         # Maybe check for L0y=0 conditions, already lined up (ahead or behind).
         Lctheta = math.atan2(L0y,L0x) # Direction (radians) from car to stoplight when car is at 0,0,0.
         LcR = math.sqrt(L0x*L0x + L0y*L0y) # Distance from stoplight to car.
@@ -222,13 +250,14 @@ class TLDetector(object):
         Lcx= LcR * math.cos(Lcphi) # How far stoplight is ahead of car.
         Lcy= LcR * math.sin(Lcphi) # How far stoplight is laterally over from car's current path.
         hw,hh= image_width/2, image_height/2 # Screen half width and half height.
+
+        # Simple screen projection given aligned system.
+        # https://en.wikipedia.org/wiki/3D_projection
+        y = hh + int(fy*L0z/Lcx) # Screen vertical = focal_len_vert * stoplight_dist_high / stoplight_dist_ahead
+        x = hw + int(fx*Lcy/Lcx) # Screen horiz = focal_len_horiz * stoplight_dist_over / stoplight_dist_ahead
         if Lcx<0 or x<-hw or x>hw or y<-hh or y>hh:
             return False #???? Or (-1,-1), basically, it's not on the screen.
         else:
-            # Simple screen projection given aligned system.
-            # https://en.wikipedia.org/wiki/3D_projection
-            y = hh + int(fy*L0z/Lcx) # Screen vertical = focal_len_vert * stoplight_dist_high / stoplight_dist_ahead
-            x = hw + int(fx*Lcy/Lcx) # Screen horiz = focal_len_horiz * stoplight_dist_over / stoplight_dist_ahead
             return (x,y)
 
     def project_to_image_plane(self, point_in_world):
@@ -262,34 +291,37 @@ class TLDetector(object):
 
         #TODO - DONE - Use tranform and rotation to calculate 2D position of light in image
 
-        # From quaternion to Euler angles:
-        x = self.pose.pose.orientation.x
-        y = self.pose.pose.orientation.y
-        z = self.pose.pose.orientation.z
-        w = self.pose.pose.orientation.w
-        print(x,y,z,w)
+        # Get quaternion values from self orientation
+        x_ = self.pose.pose.orientation.x
+        y_ = self.pose.pose.orientation.y
+        z_ = self.pose.pose.orientation.z
+        w_ = self.pose.pose.orientation.w
         
-        # Determine car heading:
-        t3 = +2.0 * (w * z + x*y)
-        t4 = +1.0 - 2.0 * (y*y + z*z)
-        theta = math.degrees(math.atan2(t3, t4))
+        # Determine car heading via quaternion to Euler conversion
+	car_heading=self.Quaternion_toEulerianAngle(x_,y_,z_,w_)
 
-        Xcar = (cord_y-self.pose.pose.position.y)*math.sin(math.radians(theta))-(self.pose.pose.position.x-cord_x)*math.cos(math.radians(theta))
-        Ycar = (cord_y-self.pose.pose.position.y)*math.cos(math.radians(theta))-(cord_x-self.pose.pose.position.x)*math.sin(math.radians(theta))
+	Lwx=point_in_world[0]
+	Lwy=point_in_world[1]
 
-        self.distance_to_light = Xcar
-        self.deviation_of_light = Ycar
+	# How far stoplight is ahead of car.
+        Lcx = (Lwy-self.pose.pose.position.y)*math.sin(math.radians(car_heading))-(self.pose.pose.position.x-Lwx)*math.cos(math.radians(car_heading))
+	# How far stoplight is laterally over from car's current path.
+        Lcy = (Lwy-self.pose.pose.position.y)*math.cos(math.radians(car_heading))-(Lwx-self.pose.pose.position.x)*math.sin(math.radians(car_heading))
 
-        objectPoints = np.array([[float(Xcar), float(Ycar), 0.0]], dtype=np.float32)
+	#Object point is already in car coordinate system now
+        objectPoints = np.array([[float(Lcx), float(Lcy), 0.0]], dtype=np.float32)
 
+	#set transfromations zero as everything is in car cosy
         rvec = (0,0,0)
         tvec = (0,0,0)
 
+	#create camera matrix
         cameraMatrix = np.array([[fx,  0, image_width/2],
                                 [ 0, fy, image_height/2],
                                 [ 0,  0,  1]])
         distCoeffs = None
 
+	# Same as simple screen projection given aligned system.
         ret, _ = cv2.projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs)
 
         x = int(ret[0,0,0])
@@ -313,7 +345,9 @@ class TLDetector(object):
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
 
-        x, y = self.project_to_image_plane(light.pose.pose.position)
+        x, y = self.project_to_image_plane(light)
+
+	rospy.loginfo('[TLNode_Real] Projected points '+str(x)+' '+str(y))
 
         #TODO - DONE - use light location to zoom in on traffic light in image
         
@@ -322,13 +356,20 @@ class TLDetector(object):
             return TrafficLight.UNKNOWN
         else:
             # Cropped for the classifier from Markus which would need to ingest bgr8 images that are of size 300x200 (Can be changed if needed)
-            cropped_image = cv2.resize(cv_image,(300, 200), interpolation = cv2.INTER_CUBIC)
+            cv_cropped_image = cv_image[(y-100):(y+100),(x-150):(x+150)]
             # A publisher to show the cropped images. Enable definition in __init__ also.
-            #self.cropped_pub.publish(cropped_image)
+	    cv_marked_image = cv_image.copy()
+ 	    cv_marked_image = cv2.drawMarker(cv_marked_image,(x,y),(0,0,255),markerType=cv2.MARKER_CROSS, markerSize=30, thickness=2, line_type=cv2.LINE_AA)
+            self.time=time.clock()
+            cv2.imwrite('/home/student/Pictures/raw/'+str(int(self.time*1000))+'.jpg',cv_image)
+            cv2.imwrite('/home/student/Pictures/marked/'+str(int(self.time*1000))+'.jpg',cv_marked_image)
+            cv2.imwrite('/home/student/Pictures/cropped/'+str(int(self.time*1000))+'.jpg',cv_cropped_image)
+	    rospy.loginfo('[TLNode_Real] Saved Image ')
+	    #self.cropped_pub.publish(cropped_image)
             
 
         #Get classification
-        return self.light_classifier.get_classification(cropped_image)
+        return self.light_classifier.get_classification(cv_cropped_image)
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
