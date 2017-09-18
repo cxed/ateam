@@ -40,6 +40,9 @@ class TLDetector(object):
         self.config = yaml.load(config_string)
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
+        # A publisher to show us the cropped images. Maybe disable when no longer needed.
+        # What's the MESSAGE_TYPE?
+        #self.cropped_pub =            rospy.Publisher("/crop_image",MESSAGE_TYPE, queue_size=2) 
 
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
@@ -207,7 +210,7 @@ class TLDetector(object):
         #======== TODO: Need to get this information out of the input argument.
         Lwx,Lwy,Lwz = EXTRACT_LIGHT_WORLD_LOCATION_FROM_INPUT(point_in_world)
         #======== TODO: Need to get this information out of its ROS package?
-        Cwx,Cwy,Cwz,Cwtheta = CAR_WORLD_LOCATION_AND_HEADING # Cwtheta in radians!
+        Cwx,Cwy,Cwz,Cwtheta = CAR_WORLD_LOCATION_AND_HEADING # Cwtheta in radians! Use self.pose somehow.
         L0x,L0y,L0z = Lwx-Cwx,Lwy-Cwy,Lwz-Cwz # Stoplight position for coords moved so car is at 0,0,0.
         # Maybe check for L0y=0 conditions, already lined up (ahead or behind).
         Lctheta = math.atan2(L0y,L0x) # Direction (radians) from car to stoplight when car is at 0,0,0.
@@ -317,6 +320,9 @@ class TLDetector(object):
         else:
             # Cropped for the classifier from Markus which would need to ingest bgr8 images that are of size 300x200 (Can be changed if needed)
             cropped_image = cv2.resize(cv_image,(300, 200), interpolation = cv2.INTER_CUBIC)
+            # A publisher to show the cropped images.
+            #self.cropped_pub.publish(cropped_image)
+            
 
         #Get classification
         return self.light_classifier.get_classification(cropped_image)
