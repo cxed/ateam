@@ -1,5 +1,6 @@
 from pid import PID
 from yaw_controller import YawController
+import rospy
 
 GAS_DENSITY = 2.858 # this is in kg / gallon it seems
 MPH_TO_MPS = 0.44704
@@ -64,4 +65,9 @@ class Controller(object):
 	
 	# TODO implement braking
         brake = 0
+	# simple braking just so we can get the car to stop at the light
+	if velocity_error < 0:
+		throttle = 0
+		brake = min(acceleration, self.decel_limit) * self.vehicle_mass * self.wheel_radius * -1
+
         return throttle, brake, steer

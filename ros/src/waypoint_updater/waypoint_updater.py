@@ -27,7 +27,7 @@ LOOKAHEAD_WPS = 30 # Number of waypoints we will publish. You can change this nu
 MPH_TO_MPS = 0.44704 # converions for miles per hour to meters per second
 MAX_SPEED = 10 * MPH_TO_MPS # max speed for CARLA is 10 miles per hour - convert this to MPS
 NARROW_SEARCH_RANGE = 10  # Number of waypoints to search current position back and forth
-MAX_DECEL = 0.2
+MAX_DECEL = 1
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -73,12 +73,12 @@ class WaypointUpdater(object):
             lane.header.frame_id = self.current_pose.header.frame_id
             lane.header.stamp = rospy.Time(0)
 
-            if self.redlight_waypoint_index != -1:
+            if self.redlight_waypoint_index != -1 and (self.redlight_waypoint_index - self.next_waypoint_index) < 15:
                 # TODO: how far do we stop before the traffic light? i.e. where
                 #       is the line that we are supposed to stop at? we only get the
                 #       position of the traffic light.
                 #       for now, use 20 waypoints before the traffic light waypoint
-                stop_waypoint_index = self.redlight_waypoint_index - 20
+                stop_waypoint_index = self.redlight_waypoint_index
 
                 # TODO: handle wrapping
                 #       Do we always generate LOOKAHEAD_WPS number of points? what to do
@@ -100,8 +100,8 @@ class WaypointUpdater(object):
                     #     lane.waypoints[0].twist.twist.linear.x,
                     #     decelerate_points_count)
                 
-                # generate up to the LOOKAHEAD_WPS number of waypoints
-                # fill it up with waypoints with zero velocity
+                #generate up to the LOOKAHEAD_WPS number of waypoints
+                #fill it up with waypoints with zero velocity
                 if decelerate_points_count < LOOKAHEAD_WPS:
                     for i in range(LOOKAHEAD_WPS - decelerate_points_count):
                         wp_new = Waypoint()
@@ -109,7 +109,6 @@ class WaypointUpdater(object):
                         wp_new.pose = wp_extract.pose
                         lane.waypoints.append(wp_new)
                         wp_new.twist.twist.linear.x = 0
-                        next_waypoint_index = (next_waypoint_index + 1) % number_waypoints
 
             else:
                 # now create the waypoints ahead
@@ -246,6 +245,8 @@ class WaypointUpdater(object):
         return waypoints
 
     def traffic_waypoint_cb(self, msg):
+        if self.redlight_waypoint_index != msg.data:
+            rospy.loginfo("traffic light status change to %s", msg.data)
         self.redlight_waypoint_index = msg.data
 
     def obstacle_cb(self, msg):
