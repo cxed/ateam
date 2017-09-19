@@ -59,7 +59,9 @@ class TLDetector(object):
         self.last_car_position = 0
         self.last_light_pos_wp = []
         self.IGNORE_FAR_LIGHT = 25.0
-        self.simulator_debug_mode = 0
+        self.IGNORE_FAR_LIGHT_SIMULATOR = 50.0
+        self.simulator_debug_mode = 1
+        self.save_images_simulator = 1
 
         rospy.spin()
 
@@ -332,11 +334,12 @@ class TLDetector(object):
             # A publisher to show the cropped images. Enable definition in __init__ also.
 	    cv_marked_image = cv_image.copy()
  	    cv_marked_image = cv2.drawMarker(cv_marked_image,(x,y),(0,0,255),markerType=cv2.MARKER_CROSS, markerSize=30, thickness=2, line_type=cv2.LINE_AA)
-            self.time=time.clock()
-            #cv2.imwrite('/home/student/Pictures/raw/'+str(int(self.time*1000))+'.jpg',cv_image)
-            #cv2.imwrite('/home/student/Pictures/marked/'+str(int(self.time*1000))+'.jpg',cv_marked_image)
-            #cv2.imwrite('/home/student/Pictures/cropped/'+str(int(self.time*1000))+'.jpg',cv_cropped_image)
-	    rospy.loginfo('[TLNode_Real] Saved Image ')
+
+	    if(self.save_images_simulator==1):
+            	self.time=time.clock()
+		path = '/home/student/Pictures/simulated/'
+            	cv2.imwrite(path+str(int(self.time*1000))+'.jpg',cv_cropped_image)
+	    	rospy.loginfo('[TLNode_Real] Saved Image from simulator ')
 	    self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
 	    #self.cropped_pub.publish(cropped_image)
             
@@ -477,7 +480,7 @@ class TLDetector(object):
         
 	#Fix changed handling of simulator. Not being done in this function anymore
         if light:
-            if light_distance >= self.IGNORE_FAR_LIGHT:
+            if light_distance >= self.IGNORE_FAR_LIGHT_SIMULATOR:
                 return -1, TrafficLight.UNKNOWN
             else:
                 state = self.lights[light_idx].state
