@@ -41,7 +41,7 @@ class TLDetector(object):
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
 
-        self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
+        self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=0)
         # A publisher to show us the cropped images. Maybe disable when no longer needed.
         # Refer to styx/conf.py for more hints.
         #self.cropped_pub =            rospy.Publisher("/crop_image",image, queue_size=2) 
@@ -59,7 +59,7 @@ class TLDetector(object):
         self.last_car_position = 0
         self.last_light_pos_wp = []
         self.IGNORE_FAR_LIGHT = 100.0
-        self.simulator_debug_mode = 0
+        self.simulator_debug_mode = 1
 
         rospy.spin()
 
@@ -72,65 +72,35 @@ class TLDetector(object):
         self.base_waypoints_sub.unregister()
 
     def traffic_cb(self, msg):
-
-	if(self.simulator_debug_mode==1):
-        	self.lights = msg.lights
-		rospy.loginfo('[TLNode_Simu] Start of TL Node in simulation')
-        	light_wp, state = self.process_traffic_lights_simulation()
-		rospy.loginfo('[TLNode_Simu] End of process traffic lights in simulation with result' + str(state) + str(light_wp))
-
-        	'''
-        	Publish upcoming red lights at camera frequency.
-        	Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-        	of times till we start using it. Otherwise the previous stable 	state is
-        	used.
-        	'''
-		if self.state != state:
-		    self.state_count = 0
-		    self.state = state
-		    rospy.loginfo('[TLNode_Simu] End of TL Node. Detected change in traffic light but will need more confirmations before publishing in case its a redlight')
-		elif self.state_count >= STATE_COUNT_THRESHOLD:
-		    self.last_state = self.state
-		    light_wp = light_wp if state == TrafficLight.RED else -1
-		    self.last_wp = light_wp
-		    self.upcoming_red_light_pub.publish(Int32(light_wp))
-		    rospy.loginfo('[TLNode_Simu] End of TL Node publishing upcoming redlight at waypoint' + str(light_wp))
-		else:
-		    self.upcoming_red_light_pub.publish(Int32(self.last_wp))
-		    rospy.loginfo('[TLNode_Simu] End of TL Node publishing upcoming redlight at waypoint' + str(light_wp))
-		self.state_count += 1
+	self.lights = msg.lights
 
     def image_cb(self, msg):
-        """Identifies red lights in the incoming camera image and publishes the index
-            of the waypoint closest to the red light to /traffic_waypoint
 
-        Args:
-            msg (Image): image from car-mounted camera
+	#rospy.loginfo('[TLNode] Start of TL Node')
+	if(self.simulator_debug_mode==1):
+		light_wp, state = self.process_traffic_lights_simulation()
+	elif(self.simulator_debug_mode==0):
+		light_wp, state = self.process_traffic_lights()
+	#rospy.loginfo('[TLNode] End of process traffic lights with result' + str(state) + str(light_wp))
 
-        """
-	if(self.simulator_debug_mode==0):
-        	self.has_image = True
-        	self.camera_image = msg
-		rospy.loginfo('[TLNode_Real] Start of TL Node for real')
-        	light_wp, state = self.process_traffic_lights()
-		rospy.loginfo('[TLNode_Real] End of TL Node for real with result' + str(state) + str(light_wp))
+	'''
+	Publish upcoming red lights at camera frequency.
+	Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
+	of times till we start using it. Otherwise the previous stable 	state is
+	used.
+	'''
+	if self.state != state:
+	    self.state_count = 0
+	    self.state = state
+	    #rospy.loginfo('[TLNode_Simu] End of TL Node. Detected change in traffic light but will need more confirmations before publishing in case its a redlight')
+	if self.state_count >= STATE_COUNT_THRESHOLD:
+	    self.last_state = self.state
+	    light_wp = light_wp if state == TrafficLight.RED else -1
+	    self.last_wp = light_wp
+	    #rospy.loginfo('[TLNode_Simu] End of TL Node publishing upcoming redlight at waypoint ' + str(light_wp) + str(state))
+	    self.upcoming_red_light_pub.publish(Int32(light_wp))
 
-        	'''
-        	Publish upcoming red lights at camera frequency.
-        	Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-        	of times till we start using it. Otherwise the previous stable 	state is
-        	used.
-        	'''
-		if self.state != state:
-		    self.state_count = 0
-		    self.state = state
-		elif self.state_count >= STATE_COUNT_THRESHOLD:
-		    self.last_state = self.state
-		    light_wp = light_wp if state == TrafficLight.RED else -1
-		    self.last_wp = light_wp
-		    self.upcoming_red_light_pub.publish(Int32(light_wp))
-		else:
-		    self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+	if self.state_count < STATE_COUNT_THRESHOLD:	
 		self.state_count += 1
         
     #Newly introduced function calculating a normal beeline distance
@@ -449,7 +419,7 @@ class TLDetector(object):
 	for i in range(len(self.lights)):
 		light_positions.append(self.lights[i].pose.pose.position)
 
-	rospy.loginfo('[TLNode_Simu] Last light position as given by topic' + str(light_positions[len(light_positions)-1]))
+	#rospy.loginfo('[TLNode_Simu] Last light position as given by topic' + str(light_positions[len(light_positions)-1]))
 	
         #Find where the vehicle is and safe it in car position
         if self.pose:
@@ -457,7 +427,7 @@ class TLDetector(object):
             if car_position is not None:
                 self.last_car_position = car_position
 
-	rospy.loginfo('[TLNode_Simu] Current car ' + str(car_position))
+	#rospy.loginfo('[TLNode_Simu] Current car ' + str(car_position))
 
         # Attribute the light positions to waypoints
         light_pos_wp = []
@@ -469,9 +439,9 @@ class TLDetector(object):
 		# AJankl: Put it back to the state from my implmentation lpos is not a list cause it says light_positions[i] so its only one element of the array
                 l_pos = self.get_closest_waypoint_light(wp, light_positions[i])
 		
-		if(i==(len(light_positions)-1)):
-			rospy.loginfo('[TLNode_Simu] Light: '+ str(i) + ' at position ' + str(light_positions[i]))
-			rospy.loginfo('[TLNode_Simu] Belongs to waypoint: '+ str(l_pos) + ' at position ' + str(wp.waypoints[l_pos].pose.pose.position))
+		#if(i==(len(light_positions)-1)):
+			#rospy.loginfo('[TLNode_Simu] Light: '+ str(i) + ' at position ' + str(light_positions[i]))
+			#rospy.loginfo('[TLNode_Simu] Belongs to waypoint: '+ str(l_pos) + ' at position ' + str(wp.waypoints[l_pos].pose.pose.position))
 
                 light_pos_wp.append(l_pos)
             self.last_light_pos_wp = light_pos_wp
@@ -491,15 +461,15 @@ class TLDetector(object):
         	light_idx = light_pos_wp.index(light_num_wp)
         	light = light_positions[light_idx]
 
-		rospy.loginfo('[TLNode_Simu] Light identified to be nearest to car: '+ str(light_idx) + ' at position ' + str(light))
-		rospy.loginfo('[TLNode_Simu] Belongs to waypoint: '+ str(light_num_wp) + ' at position ' + str(self.waypoints.waypoints[light_num_wp].pose.pose.position))
-		rospy.loginfo('[TLNode_Simu] Car is at waypoint: '+ str(car_position) + ' at position ' + str(wp.waypoints[car_position].pose.pose.position))
+		#rospy.loginfo('[TLNode_Simu] Light identified to be nearest to car: '+ str(light_idx) + ' at position ' + str(light))
+		#rospy.loginfo('[TLNode_Simu] Belongs to waypoint: '+ str(light_num_wp) + ' at position ' + str(self.waypoints.waypoints[light_num_wp].pose.pose.position))
+		#rospy.loginfo('[TLNode_Simu] Car is at waypoint: '+ str(car_position) + ' at position ' + str(wp.waypoints[car_position].pose.pose.position))
         
         	# FIX: distance_light does not seem to be defined.
         	#light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
         	light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
 
-		rospy.loginfo('[TLNode_Simu] Distance to light: '+ str(light_distance))
+		#rospy.loginfo('[TLNode_Simu] Distance to light: '+ str(light_distance))
         
 	#Fix changed handling of simulator. Not being done in this function anymore
         if light:
@@ -507,8 +477,8 @@ class TLDetector(object):
                 return -1, TrafficLight.UNKNOWN
             else:
                 state = self.lights[light_idx].state
-		rospy.loginfo('[TLNode_Simu] Light is in state: '+ str(state))
-		rospy.loginfo('[TLNode_Simu] Return values therefore: '+ str(light_num_wp)+ ' , '+str(state))
+		#rospy.loginfo('[TLNode_Simu] Light is in state: '+ str(state))
+		#rospy.loginfo('[TLNode_Simu] Return values therefore: '+ str(light_num_wp)+ ' , '+str(state))
                 return light_num_wp, state
             
         self.waypoints = None
