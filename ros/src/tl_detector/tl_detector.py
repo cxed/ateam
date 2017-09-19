@@ -59,7 +59,7 @@ class TLDetector(object):
         self.last_car_position = 0
         self.last_light_pos_wp = []
         self.IGNORE_FAR_LIGHT = 100.0
-        self.simulator_debug_mode = 1
+        self.simulator_debug_mode = 0
 
         rospy.spin()
 
@@ -76,6 +76,8 @@ class TLDetector(object):
 
     def image_cb(self, msg):
 
+        self.has_image = True
+        self.camera_image = msg
 	#rospy.loginfo('[TLNode] Start of TL Node')
 	if(self.simulator_debug_mode==1):
 		light_wp, state = self.process_traffic_lights_simulation()
@@ -279,7 +281,7 @@ class TLDetector(object):
         Lcy = (Lwy-self.pose.pose.position.y)*math.cos(math.radians(car_heading))-(Lwx-self.pose.pose.position.x)*math.sin(math.radians(car_heading))
 
 	#Object point is already in car coordinate system now
-        objectPoints = np.array([[float(Lcx), float(Lcy), 0.0]], dtype=np.float32)
+        objectPoints = np.array([[float(Lcx), float(Lcy), 5.0]], dtype=np.float32)
 
 	#set transfromations zero as everything is in car cosy
         rvec = (0,0,0)
@@ -326,7 +328,7 @@ class TLDetector(object):
             return TrafficLight.UNKNOWN
         else:
             # Cropped for the classifier from Markus which would need to ingest bgr8 images that are of size 300x200 (Can be changed if needed)
-            cv_cropped_image = cv_image[(y-100):(y+100),(x-150):(x+150)]
+            cv_cropped_image = cv_image[(y-150):(y+150),(x-100):(x+100)]
             # A publisher to show the cropped images. Enable definition in __init__ also.
 	    cv_marked_image = cv_image.copy()
  	    cv_marked_image = cv2.drawMarker(cv_marked_image,(x,y),(0,0,255),markerType=cv2.MARKER_CROSS, markerSize=30, thickness=2, line_type=cv2.LINE_AA)
@@ -376,19 +378,20 @@ class TLDetector(object):
             light_pos_wp = self.last_light_pos_wp
             
         # Get the id of the next light
-        if self.last_car_position > max(light_pos_wp):
-             light_num_wp = min(light_pos_wp)
-        else:
-            light_delta = light_pos_wp[:]
-            light_delta[:] = [x - self.last_car_position for x in light_delta]
-            light_num_wp = min(i for i in light_delta if i > 0) + self.last_car_position
+	if len(light_pos_wp) is not 0:
+		if self.last_car_position > max(light_pos_wp):
+		     light_num_wp = min(light_pos_wp)
+		else:
+		    light_delta = light_pos_wp[:]
+		    light_delta[:] = [x - self.last_car_position for x in light_delta]
+		    light_num_wp = min(i for i in light_delta if i > 0) + self.last_car_position
 
-        light_idx = light_pos_wp.index(light_num_wp)
-        light = light_positions[light_idx]
-        
-        # FIX: distance_light does not seem to be defined.
-        #light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
-        light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+		light_idx = light_pos_wp.index(light_num_wp)
+		light = light_positions[light_idx]
+		
+		# FIX: distance_light does not seem to be defined.
+		#light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+		light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
         
 	#Fix changed handling of simulator. Not being done in this function anymore
         if light:
