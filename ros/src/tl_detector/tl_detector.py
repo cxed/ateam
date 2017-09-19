@@ -44,7 +44,7 @@ class TLDetector(object):
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=0)
         # A publisher to show us the cropped images. Maybe disable when no longer needed.
         # Refer to styx/conf.py for more hints.
-        #self.cropped_pub =            rospy.Publisher("/crop_image",image, queue_size=2) 
+        self.cropped_pub = rospy.Publisher("/crop_image",Image, queue_size=2) 
 
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
@@ -58,7 +58,7 @@ class TLDetector(object):
         self.best_waypoint = 0
         self.last_car_position = 0
         self.last_light_pos_wp = []
-        self.IGNORE_FAR_LIGHT = 100.0
+        self.IGNORE_FAR_LIGHT = 25.0
         self.simulator_debug_mode = 0
 
         rospy.spin()
@@ -333,10 +333,11 @@ class TLDetector(object):
 	    cv_marked_image = cv_image.copy()
  	    cv_marked_image = cv2.drawMarker(cv_marked_image,(x,y),(0,0,255),markerType=cv2.MARKER_CROSS, markerSize=30, thickness=2, line_type=cv2.LINE_AA)
             self.time=time.clock()
-            cv2.imwrite('/home/student/Pictures/raw/'+str(int(self.time*1000))+'.jpg',cv_image)
-            cv2.imwrite('/home/student/Pictures/marked/'+str(int(self.time*1000))+'.jpg',cv_marked_image)
-            cv2.imwrite('/home/student/Pictures/cropped/'+str(int(self.time*1000))+'.jpg',cv_cropped_image)
+            #cv2.imwrite('/home/student/Pictures/raw/'+str(int(self.time*1000))+'.jpg',cv_image)
+            #cv2.imwrite('/home/student/Pictures/marked/'+str(int(self.time*1000))+'.jpg',cv_marked_image)
+            #cv2.imwrite('/home/student/Pictures/cropped/'+str(int(self.time*1000))+'.jpg',cv_cropped_image)
 	    rospy.loginfo('[TLNode_Real] Saved Image ')
+	    self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
 	    #self.cropped_pub.publish(cropped_image)
             
 
