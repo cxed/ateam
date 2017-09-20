@@ -57,11 +57,13 @@ class Controller(object):
         throttle = min(acceleration, self.accel_limit)
         
         # Obtain the two components for the steering
-        corrective_steer = self.yaw_controller.get_steering(target_linear_velocity, target_angular_velocity, current_linear_velocity)
-        predictive_steer = self.angular_velocity_PID.step(target_angular_velocity, 1.0 / self.refresh_rate)
+        #corrective_steer = self.yaw_controller.get_steering(target_linear_velocity, target_angular_velocity, current_linear_velocity)
+        #predictive_steer = self.angular_velocity_PID.step(target_angular_velocity, 1.0 / self.refresh_rate)
 
         # add the two components to produce final steer value
-        steer = corrective_steer + predictive_steer
+        #steer = corrective_steer + predictive_steer
+	
+	steer = self.yaw_controller.get_steering(target_linear_velocity, target_angular_velocity, current_linear_velocity)
     
         # TODO implement braking
         brake = 0
