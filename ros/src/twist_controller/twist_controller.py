@@ -62,9 +62,9 @@ class Controller(object):
 
         # add the two components to produce final steer value
         #steer = corrective_steer + predictive_steer
-	
-	steer = self.yaw_controller.get_steering(target_linear_velocity, target_angular_velocity, current_linear_velocity)
-    
+
+        steer = self.yaw_controller.get_steering(target_linear_velocity, target_angular_velocity, current_linear_velocity)
+
         # TODO implement braking
         brake = 0
         # simple braking just so we can get the car to stop at the light
