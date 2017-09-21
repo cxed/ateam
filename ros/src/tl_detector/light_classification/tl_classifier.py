@@ -9,7 +9,7 @@ class TLClassifier(object):
         # helper vars
         self.i = 0
         self.debug = True
-        self.capture_images = True
+        self.capture_images = False
 
         rospack = rospkg.RosPack()
         modelMetaFile = str(rospack.get_path('tl_detector'))+'/light_classification/model.meta'
@@ -45,6 +45,7 @@ class TLClassifier(object):
 
         choices = {1: TrafficLight.GREEN, 2: TrafficLight.YELLOW, 3: TrafficLight.RED}
         result = choices.get(classification, TrafficLight.UNKNOWN)
+        
         if self.debug:
             rospy.loginfo('[TL Classifier] ' + result + ' detected')
         if self.capture_images:
