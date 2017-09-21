@@ -74,39 +74,39 @@ class TLDetector(object):
         self.base_waypoints_sub.unregister()
 
     def traffic_cb(self, msg):
-	self.lights = msg.lights
+    self.lights = msg.lights
 
     def image_cb(self, msg):
         """Identifies red lights in the incoming camera image and publishes the index
             of the waypoint closest to the red light's stop line to /traffic_waypoint """
         self.has_image = True
         self.camera_image = msg
-	#rospy.loginfo('[TLNode] Start of TL Node')
-	if(self.simulator_debug_mode==1):
-		light_wp, state = self.process_traffic_lights_simulation()
-	elif(self.simulator_debug_mode==0):
-		light_wp, state = self.process_traffic_lights()
-	#rospy.loginfo('[TLNode] End of process traffic lights with result' + str(state) + str(light_wp))
+    #rospy.loginfo('[TLNode] Start of TL Node')
+    if(self.simulator_debug_mode==1):
+        light_wp, state = self.process_traffic_lights_simulation()
+    elif(self.simulator_debug_mode==0):
+        light_wp, state = self.process_traffic_lights()
+    #rospy.loginfo('[TLNode] End of process traffic lights with result' + str(state) + str(light_wp))
 
-	'''
-	Publish upcoming red lights at camera frequency.
-	Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-	of times till we start using it. Otherwise the previous stable 	state is
-	used.
-	'''
-	if self.state != state:
-	    self.state_count = 0
-	    self.state = state
-	    #rospy.loginfo('[TLNode_Simu] End of TL Node. Detected change in traffic light but will need more confirmations before publishing in case its a redlight')
-	if self.state_count >= STATE_COUNT_THRESHOLD:
-	    self.last_state = self.state
-	    light_wp = light_wp if state == TrafficLight.RED else -1
-	    self.last_wp = light_wp
-	    #rospy.loginfo('[TLNode_Simu] End of TL Node publishing upcoming redlight at waypoint ' + str(light_wp) + str(state))
-	    self.upcoming_red_light_pub.publish(Int32(light_wp))
+    '''
+    Publish upcoming red lights at camera frequency.
+    Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
+    of times till we start using it. Otherwise the previous stable     state is
+    used.
+    '''
+    if self.state != state:
+        self.state_count = 0
+        self.state = state
+        #rospy.loginfo('[TLNode_Simu] End of TL Node. Detected change in traffic light but will need more confirmations before publishing in case its a redlight')
+    if self.state_count >= STATE_COUNT_THRESHOLD:
+        self.last_state = self.state
+        light_wp = light_wp if state == TrafficLight.RED else -1
+        self.last_wp = light_wp
+        #rospy.loginfo('[TLNode_Simu] End of TL Node publishing upcoming redlight at waypoint ' + str(light_wp) + str(state))
+        self.upcoming_red_light_pub.publish(Int32(light_wp))
 
-	if self.state_count < STATE_COUNT_THRESHOLD:	
-		self.state_count += 1
+    if self.state_count < STATE_COUNT_THRESHOLD:    
+        self.state_count += 1
         
     #Newly introduced function calculating a normal beeline distance
     def distance(self, p1, p2):
@@ -128,7 +128,7 @@ class TLDetector(object):
             p2y= p2[1]
         delta_x = p1x - p2x
         delta_y = p1y - p2y
-        return math.sqrt(delta_x*delta_x + delta_y*delta_y)	
+        return math.sqrt(delta_x*delta_x + delta_y*delta_y)    
 
     def get_closest_waypoint(self, pose):
         """Identifies the closest path waypoint to the given position
@@ -153,24 +153,24 @@ class TLDetector(object):
         self.best_waypoint = best_waypoint
         return best_waypoint
 
-	#AJankl copied this function from: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+    #AJankl copied this function from: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
     def Quaternion_toEulerianAngle(self, x, y, z, w):
-	ysqr = y*y
-	
-	t0 = +2.0 * (w * x + y*z)
-	t1 = +1.0 - 2.0 * (x*x + ysqr)
-	X = math.degrees(math.atan2(t0, t1))
+    ysqr = y*y
+    
+    t0 = +2.0 * (w * x + y*z)
+    t1 = +1.0 - 2.0 * (x*x + ysqr)
+    X = math.degrees(math.atan2(t0, t1))
 
-	t2 = +2.0 * (w*y - z*x)
-	t2 =  1 if t2 > 1 else t2
-	t2 = -1 if t2 < -1 else t2
-	Y = math.degrees(math.asin(t2))
+    t2 = +2.0 * (w*y - z*x)
+    t2 =  1 if t2 > 1 else t2
+    t2 = -1 if t2 < -1 else t2
+    Y = math.degrees(math.asin(t2))
 
-	t3 = +2.0 * (w * z + x*y)
-	t4 = +1.0 - 2.0 * (ysqr + z*z)
-	Z = math.degrees(math.atan2(t3, t4))
+    t3 = +2.0 * (w * z + x*y)
+    t4 = +1.0 - 2.0 * (ysqr + z*z)
+    Z = math.degrees(math.atan2(t3, t4))
 
-	return Z 
+    return Z 
 
     def project_to_image_plane_2(self, point_in_world):
         """Project point from 3D world coordinates to 2D camera image location
@@ -210,12 +210,12 @@ class TLDetector(object):
         Lwx,Lwy,Lwz = point_in_world[0], point_in_world[1], 0
         #======== DONE: Need to get this information out of its ROS package?
         Cwx,Cwy,Cwz = self.pose.pose.position.x, self.pose.pose.position.y, self.pose.pose.position.z 
-	#AJankl calculated this via converting a quaternion to euler angles
-	x_=self.pose.pose.orientation.x
-	y_=self.pose.pose.orientation.y
-	z_=self.pose.pose.orientation.z
-	w_=self.pose.pose.orientation.w
-	Cwtheta = math.radians(self.Quaternion_toEulerianAngle(x_,y_,z_,w_)) # Cwtheta in radians! Used quaternion conversion for this
+    #AJankl calculated this via converting a quaternion to euler angles
+    x_=self.pose.pose.orientation.x
+    y_=self.pose.pose.orientation.y
+    z_=self.pose.pose.orientation.z
+    w_=self.pose.pose.orientation.w
+    Cwtheta = math.radians(self.Quaternion_toEulerianAngle(x_,y_,z_,w_)) # Cwtheta in radians! Used quaternion conversion for this
         #L0x,L0y,L0z = Lwx-Cwx,Lwy-Cwy,Lwz-Cwz # Stoplight position for coords moved so car is at 0,0,0.
         L0x,L0y,L0z = Lwx-Cwx,Lwy-Cwy,0 # Stoplight position for coords moved so car is at 0,0,0.
         # Maybe check for L0y=0 conditions, already lined up (ahead or behind).
@@ -273,30 +273,30 @@ class TLDetector(object):
         w_ = self.pose.pose.orientation.w
         
         # Determine car heading via quaternion to Euler conversion
-	car_heading=self.Quaternion_toEulerianAngle(x_,y_,z_,w_)
+    car_heading=self.Quaternion_toEulerianAngle(x_,y_,z_,w_)
 
-	Lwx=point_in_world[0]
-	Lwy=point_in_world[1]
+    Lwx=point_in_world[0]
+    Lwy=point_in_world[1]
 
-	# How far stoplight is ahead of car.
+    # How far stoplight is ahead of car.
         Lcx = (Lwy-self.pose.pose.position.y)*math.sin(math.radians(car_heading))-(self.pose.pose.position.x-Lwx)*math.cos(math.radians(car_heading))
-	# How far stoplight is laterally over from car's current path.
+    # How far stoplight is laterally over from car's current path.
         Lcy = (Lwy-self.pose.pose.position.y)*math.cos(math.radians(car_heading))-(Lwx-self.pose.pose.position.x)*math.sin(math.radians(car_heading))
 
-	#Object point is already in car coordinate system now
+    #Object point is already in car coordinate system now
         objectPoints = np.array([[float(Lcx), float(Lcy), 5.0]], dtype=np.float32)
 
-	#set transfromations zero as everything is in car cosy
+    #set transfromations zero as everything is in car cosy
         rvec = (0,0,0)
         tvec = (0,0,0)
 
-	#create camera matrix
+    #create camera matrix
         cameraMatrix = np.array([[fx,  0, image_width/2],
                                 [ 0, fy, image_height/2],
                                 [ 0,  0,  1]])
         distCoeffs = None
 
-	# Same as simple screen projection given aligned system.
+    # Same as simple screen projection given aligned system.
         ret, _ = cv2.projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs)
 
         x = int(ret[0,0,0])
@@ -322,7 +322,7 @@ class TLDetector(object):
 
         x, y = self.project_to_image_plane(light)
 
-	rospy.loginfo('[TLNode_Real] Projected points '+str(x)+' '+str(y))
+    rospy.loginfo('[TLNode_Real] Projected points '+str(x)+' '+str(y))
 
         #TODO - DONE - use light location to zoom in on traffic light in image
         
@@ -333,16 +333,16 @@ class TLDetector(object):
             # Cropped for the classifier from Markus which would need to ingest bgr8 images that are of size 300x200 (Can be changed if needed)
             cv_cropped_image = cv_image[(y-150):(y+150),(x-100):(x+100)]
             # A publisher to show the cropped images. Enable definition in __init__ also.
-	    cv_marked_image = cv_image.copy()
- 	    cv_marked_image = cv2.drawMarker(cv_marked_image,(x,y),(0,0,255),markerType=cv2.MARKER_CROSS, markerSize=30, thickness=2, line_type=cv2.LINE_AA)
+        cv_marked_image = cv_image.copy()
+         cv_marked_image = cv2.drawMarker(cv_marked_image,(x,y),(0,0,255),markerType=cv2.MARKER_CROSS, markerSize=30, thickness=2, line_type=cv2.LINE_AA)
 
-	    if(self.save_images_simulator==1):
-            	self.time=time.clock()
-		path = '/home/student/Pictures/simulated/'
-            	cv2.imwrite(path+str(int(self.time*1000))+'.jpg',cv_cropped_image)
-	    	rospy.loginfo('[TLNode_Real] Saved Image from simulator ')
-	    self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
-	    #self.cropped_pub.publish(cropped_image)
+        if(self.save_images_simulator==1):
+                self.time=time.clock()
+        path = '/home/student/Pictures/simulated/'
+                cv2.imwrite(path+str(int(self.time*1000))+'.jpg',cv_cropped_image)
+            rospy.loginfo('[TLNode_Real] Saved Image from simulator ')
+        self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
+        #self.cropped_pub.publish(cropped_image)
             
 
         #Get classification
@@ -378,7 +378,7 @@ class TLDetector(object):
             for i in range(len(light_positions)):
                 # FIX: See note in get_closest_waypoint_light. l_pos can't be a list!
                 # cxe: I just changed distance function to handle both. Maybe a bad idea.
-		# AJankl: Put it back to the state from my implmentation lpos is not a list cause it says light_positions[i] so its only one element of the array
+        # AJankl: Put it back to the state from my implmentation lpos is not a list cause it says light_positions[i] so its only one element of the array
                 l_pos = self.get_closest_waypoint_light(wp, light_positions[i])
                 light_pos_wp.append(l_pos)
             self.last_light_pos_wp = light_pos_wp
@@ -386,22 +386,22 @@ class TLDetector(object):
             light_pos_wp = self.last_light_pos_wp
             
         # Get the id of the next light
-	if len(light_pos_wp) is not 0:
-		if self.last_car_position > max(light_pos_wp):
-		     light_num_wp = min(light_pos_wp)
-		else:
-		    light_delta = light_pos_wp[:]
-		    light_delta[:] = [x - self.last_car_position for x in light_delta]
-		    light_num_wp = min(i for i in light_delta if i > 0) + self.last_car_position
+    if len(light_pos_wp) is not 0:
+        if self.last_car_position > max(light_pos_wp):
+             light_num_wp = min(light_pos_wp)
+        else:
+            light_delta = light_pos_wp[:]
+            light_delta[:] = [x - self.last_car_position for x in light_delta]
+            light_num_wp = min(i for i in light_delta if i > 0) + self.last_car_position
 
-		light_idx = light_pos_wp.index(light_num_wp)
-		light = light_positions[light_idx]
-		
-		# FIX: distance_light does not seem to be defined.
-		#light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
-		light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+        light_idx = light_pos_wp.index(light_num_wp)
+        light = light_positions[light_idx]
         
-	#Fix changed handling of simulator. Not being done in this function anymore
+        # FIX: distance_light does not seem to be defined.
+        #light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+        light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+        
+    #Fix changed handling of simulator. Not being done in this function anymore
         if light:
             if light_distance >= self.IGNORE_FAR_LIGHT:
                 return -1, TrafficLight.UNKNOWN
@@ -425,20 +425,20 @@ class TLDetector(object):
 
         #TODO - DONE - find the closest visible traffic light (if one exists)
         
-	#Get the traffic light positions not from the config but from the vehicle/traffic_lights topic
+    #Get the traffic light positions not from the config but from the vehicle/traffic_lights topic
         light_positions = []
-	for i in range(len(self.lights)):
-		light_positions.append(self.lights[i].pose.pose.position)
+    for i in range(len(self.lights)):
+        light_positions.append(self.lights[i].pose.pose.position)
 
-	#rospy.loginfo('[TLNode_Simu] Last light position as given by topic' + str(light_positions[len(light_positions)-1]))
-	
+    #rospy.loginfo('[TLNode_Simu] Last light position as given by topic' + str(light_positions[len(light_positions)-1]))
+    
         #Find where the vehicle is and safe it in car position
         if self.pose:
             car_position = self.get_closest_waypoint(self.pose.pose)
             if car_position is not None:
                 self.last_car_position = car_position
 
-	#rospy.loginfo('[TLNode_Simu] Current car ' + str(car_position))
+    #rospy.loginfo('[TLNode_Simu] Current car ' + str(car_position))
 
         # Attribute the light positions to waypoints
         light_pos_wp = []
@@ -447,12 +447,12 @@ class TLDetector(object):
             for i in range(len(light_positions)):
                 # FIX: See note in get_closest_waypoint_light. l_pos can't be a list!
                 # cxe: I just changed distance function to handle both. Maybe a bad idea.
-		# AJankl: Put it back to the state from my implmentation lpos is not a list cause it says light_positions[i] so its only one element of the array
+        # AJankl: Put it back to the state from my implmentation lpos is not a list cause it says light_positions[i] so its only one element of the array
                 l_pos = self.get_closest_waypoint_light(wp, light_positions[i])
-		
-		#if(i==(len(light_positions)-1)):
-			#rospy.loginfo('[TLNode_Simu] Light: '+ str(i) + ' at position ' + str(light_positions[i]))
-			#rospy.loginfo('[TLNode_Simu] Belongs to waypoint: '+ str(l_pos) + ' at position ' + str(wp.waypoints[l_pos].pose.pose.position))
+        
+        #if(i==(len(light_positions)-1)):
+            #rospy.loginfo('[TLNode_Simu] Light: '+ str(i) + ' at position ' + str(light_positions[i]))
+            #rospy.loginfo('[TLNode_Simu] Belongs to waypoint: '+ str(l_pos) + ' at position ' + str(wp.waypoints[l_pos].pose.pose.position))
 
                 light_pos_wp.append(l_pos)
             self.last_light_pos_wp = light_pos_wp
@@ -460,36 +460,36 @@ class TLDetector(object):
             light_pos_wp = self.last_light_pos_wp
 
         # Get the id of the next light
-	if len(light_pos_wp) is not 0:
-		# This branch gets taken in case the vehicle is almost through the loop. After the last light. Then the next light can only be the one that comes first in the loop.
-        	if self.last_car_position > max(light_pos_wp):
-			light_num_wp = min(light_pos_wp)
-        	else:
-            		light_delta = light_pos_wp[:]
-            		light_delta[:] = [x - self.last_car_position for x in light_delta]
-            		light_num_wp = min(i for i in light_delta if i > 0) + self.last_car_position
+    if len(light_pos_wp) is not 0:
+        # This branch gets taken in case the vehicle is almost through the loop. After the last light. Then the next light can only be the one that comes first in the loop.
+            if self.last_car_position > max(light_pos_wp):
+            light_num_wp = min(light_pos_wp)
+            else:
+                    light_delta = light_pos_wp[:]
+                    light_delta[:] = [x - self.last_car_position for x in light_delta]
+                    light_num_wp = min(i for i in light_delta if i > 0) + self.last_car_position
 
-        	light_idx = light_pos_wp.index(light_num_wp)
-        	light = light_positions[light_idx]
+            light_idx = light_pos_wp.index(light_num_wp)
+            light = light_positions[light_idx]
 
-		#rospy.loginfo('[TLNode_Simu] Light identified to be nearest to car: '+ str(light_idx) + ' at position ' + str(light))
-		#rospy.loginfo('[TLNode_Simu] Belongs to waypoint: '+ str(light_num_wp) + ' at position ' + str(self.waypoints.waypoints[light_num_wp].pose.pose.position))
-		#rospy.loginfo('[TLNode_Simu] Car is at waypoint: '+ str(car_position) + ' at position ' + str(wp.waypoints[car_position].pose.pose.position))
+        #rospy.loginfo('[TLNode_Simu] Light identified to be nearest to car: '+ str(light_idx) + ' at position ' + str(light))
+        #rospy.loginfo('[TLNode_Simu] Belongs to waypoint: '+ str(light_num_wp) + ' at position ' + str(self.waypoints.waypoints[light_num_wp].pose.pose.position))
+        #rospy.loginfo('[TLNode_Simu] Car is at waypoint: '+ str(car_position) + ' at position ' + str(wp.waypoints[car_position].pose.pose.position))
         
-        	# FIX: distance_light does not seem to be defined.
-        	#light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
-        	light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+            # FIX: distance_light does not seem to be defined.
+            #light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+            light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
 
-		#rospy.loginfo('[TLNode_Simu] Distance to light: '+ str(light_distance))
+        #rospy.loginfo('[TLNode_Simu] Distance to light: '+ str(light_distance))
         
-	#Fix changed handling of simulator. Not being done in this function anymore
+    #Fix changed handling of simulator. Not being done in this function anymore
         if light:
             if light_distance >= self.IGNORE_FAR_LIGHT_SIMULATOR:
                 return -1, TrafficLight.UNKNOWN
             else:
                 state = self.lights[light_idx].state
-		#rospy.loginfo('[TLNode_Simu] Light is in state: '+ str(state))
-		#rospy.loginfo('[TLNode_Simu] Return values therefore: '+ str(light_num_wp)+ ' , '+str(state))
+        #rospy.loginfo('[TLNode_Simu] Light is in state: '+ str(state))
+        #rospy.loginfo('[TLNode_Simu] Return values therefore: '+ str(light_num_wp)+ ' , '+str(state))
                 return light_num_wp, state
             
         self.waypoints = None
