@@ -33,7 +33,7 @@ class Controller(object):
         # for steering, clamp the output to +- 25 degrees (in radians)
         self.angular_velocity_PID = PID(5.0, 0.1,0.5,mn=-MAX_STEERING, mx=MAX_STEERING)
         
-    # create a yaw controller
+        # create a yaw controller
         self.yaw_controller = YawController(self.wheel_base, self.steer_ratio, self.min_speed, self.max_lat_accel, self.max_steer_angle)
         
 
@@ -56,18 +56,18 @@ class Controller(object):
         acceleration = throttle_cmd - current_linear_velocity
         throttle = min(acceleration, self.accel_limit)
         
-    # Obtain the two components for the steering
+        # Obtain the two components for the steering
         corrective_steer = self.yaw_controller.get_steering(target_linear_velocity, target_angular_velocity, current_linear_velocity)
         predictive_steer = self.angular_velocity_PID.step(target_angular_velocity, 1.0 / self.refresh_rate)
 
-    # add the two components to produce final steer value
+        # add the two components to produce final steer value
         steer = corrective_steer + predictive_steer
     
-    # TODO implement braking
+        # TODO implement braking
         brake = 0
-    # simple braking just so we can get the car to stop at the light
-    if velocity_error < 0:
-        throttle = 0
-        brake = min(acceleration, self.decel_limit) * self.vehicle_mass * self.wheel_radius * -1
+        # simple braking just so we can get the car to stop at the light
+        if velocity_error < 0:
+            throttle = 0
+            brake = min(acceleration, self.decel_limit) * self.vehicle_mass * self.wheel_radius * -1
 
         return throttle, brake, steer
