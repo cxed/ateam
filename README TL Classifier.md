@@ -25,4 +25,4 @@ The classifier reads in the images from each directory; by knowing the directory
 
 * *tl_classifier.py*: (Provided by Udacity): contains TLClassifier() class. This  is the *"Client"* class; it loads the model stored in the training step and classifies incoming images. It reuses the logits from the trainer (Not strictly required, but avoids code duplication)
 
-* *train.py*: short helper class. Use this is you need to invoke training. It just instantiates the training class and invokes training.  
+* *train.py*: short helper class. Use this if you need to invoke training. It just instantiates the training class and invokes training.  
