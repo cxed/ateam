@@ -6,7 +6,7 @@ from tl_classifier_trainer import TLClassifier_Trainer
 
 class TLClassifier(object):
     def __init__(self):
-        #TODO load classifier
+        #TODO DONE load classifier
 	self.i = 1000
         self.debug_classifier = True
         self.capture_images = True
