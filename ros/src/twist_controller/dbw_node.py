@@ -46,17 +46,17 @@ class DBWNode(object):
 
         # This is the twist controller object
         self.controller = Controller(
-        	vehicle_mass = rospy.get_param('~vehicle_mass', 1736.35),
-        	fuel_capacity = rospy.get_param('~fuel_capacity', 13.5),
-        	brake_deadband = rospy.get_param('~brake_deadband', .1),
-        	decel_limit = rospy.get_param('~decel_limit', -5),
-        	accel_limit = rospy.get_param('~accel_limit', 1.),
-        	wheel_radius = rospy.get_param('~wheel_radius', 0.2413),
-        	wheel_base = rospy.get_param('~wheel_base', 2.8498),
-        	steer_ratio = rospy.get_param('~steer_ratio', 14.8),
-        	max_lat_accel = rospy.get_param('~max_lat_accel', 3.),
-        	max_steer_angle = rospy.get_param('~max_steer_angle', 8.),
-        	min_speed = self.min_speed,
+            vehicle_mass = rospy.get_param('~vehicle_mass', 1736.35),
+            fuel_capacity = rospy.get_param('~fuel_capacity', 13.5),
+            brake_deadband = rospy.get_param('~brake_deadband', .1),
+            decel_limit = rospy.get_param('~decel_limit', -5),
+            accel_limit = rospy.get_param('~accel_limit', 1.),
+            wheel_radius = rospy.get_param('~wheel_radius', 0.2413),
+            wheel_base = rospy.get_param('~wheel_base', 2.8498),
+            steer_ratio = rospy.get_param('~steer_ratio', 14.8),
+            max_lat_accel = rospy.get_param('~max_lat_accel', 3.),
+            max_steer_angle = rospy.get_param('~max_steer_angle', 8.),
+            min_speed = self.min_speed,
             refresh_rate = self.refresh_rate)
 
 
@@ -101,37 +101,37 @@ class DBWNode(object):
 
         rate = rospy.Rate(self.refresh_rate)
         while not rospy.is_shutdown():
-        	# preliminary attempt to get car moving
-        	# block multiple calls if the velocity has already been set
-        	# TODO add dbw_enabled
-        	if self.current_linear_velocity is None or self.target_linear_velocity is None:
-        		continue
+            # preliminary attempt to get car moving
+            # block multiple calls if the velocity has already been set
+            # TODO add dbw_enabled
+            if self.current_linear_velocity is None or self.target_linear_velocity is None:
+                continue
 
-    		throttle,brake,steer = self.controller.control(self.current_linear_velocity,self.current_angular_velocity,self.target_linear_velocity,self.target_angular_velocity)
-    		self.publish(throttle, brake, steer)
-        	
-        	rate.sleep()
+            throttle,brake,steer = self.controller.control(self.current_linear_velocity,self.current_angular_velocity,self.target_linear_velocity,self.target_angular_velocity)
+            self.publish(throttle, brake, steer)
+            
+            rate.sleep()
 
     
     def extract_current_velocities(self, msg):
-    	# extract the current linear and angular velocities from TwistStamped type
-    	self.current_linear_velocity = msg.twist.linear.x
-    	self.current_angular_velocity = msg.twist.angular.z
+        # extract the current linear and angular velocities from TwistStamped type
+        self.current_linear_velocity = msg.twist.linear.x
+        self.current_angular_velocity = msg.twist.angular.z
 
         # rospy.logerr('Current linear velocity: ' + str(self.current_linear_velocity))
         # rospy.logerr('Current angular velocity: ' + str(self.current_angular_velocity))
 
     
     def extract_target_velocities(self, msg):
-    	# extract the target linear and angular velocities from TwistStamped type
-    	self.target_linear_velocity = msg.twist.linear.x
-    	self.target_angular_velocity = msg.twist.angular.z
+        # extract the target linear and angular velocities from TwistStamped type
+        self.target_linear_velocity = msg.twist.linear.x
+        self.target_angular_velocity = msg.twist.angular.z
         # confirmed htat these are the only values populated in the msg
 
     
     def extract_dbw_status(self, msg):
-    	# extract the boolean status of the dbw from the msg
-    	self.dbw_enabled = msg.data
+        # extract the boolean status of the dbw from the msg
+        self.dbw_enabled = msg.data
 
 
     def publish(self, throttle, brake, steer):

@@ -3,6 +3,7 @@
 import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint, TrafficLightArray
+from std_msgs.msg import Int32
 import tf
 
 import math
@@ -26,7 +27,7 @@ LOOKAHEAD_WPS = 30 # Number of waypoints we will publish. You can change this nu
 MPH_TO_MPS = 0.44704 # converions for miles per hour to meters per second
 MAX_SPEED = 10 * MPH_TO_MPS # max speed for CARLA is 10 miles per hour - convert this to MPS
 NARROW_SEARCH_RANGE = 10  # Number of waypoints to search current position back and forth
-MAX_DECEL = 0.2
+MAX_DECEL = 1
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -36,8 +37,7 @@ class WaypointUpdater(object):
         self.base_waypoints_sub = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
-        #rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
-
+        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_waypoint_cb)
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
 
         # TODO: Add other member variables you need below
@@ -46,11 +46,7 @@ class WaypointUpdater(object):
         self.next_waypoint_index = None
         self.yaw = None
         self.last_waypoint_index = None
-        # list to store each traffic light's corresponding waypoint index
-        self.traffic_lights_waypoints = None
         # Waypoint index of a upcoming redlight, -1 if it does not exist
-        # Before traffic light detection module is up, this will be updated from 
-        # /vehicle/traffic_lights callback. 
         self.redlight_waypoint_index = -1
 
         rospy.spin()
@@ -77,12 +73,12 @@ class WaypointUpdater(object):
             lane.header.frame_id = self.current_pose.header.frame_id
             lane.header.stamp = rospy.Time(0)
 
-            if self.redlight_waypoint_index != -1:
+            if self.redlight_waypoint_index != -1 and (self.redlight_waypoint_index - self.next_waypoint_index) < 15:
                 # TODO: how far do we stop before the traffic light? i.e. where
                 #       is the line that we are supposed to stop at? we only get the
                 #       position of the traffic light.
                 #       for now, use 20 waypoints before the traffic light waypoint
-                stop_waypoint_index = self.redlight_waypoint_index - 20
+                stop_waypoint_index = self.redlight_waypoint_index
 
                 # TODO: handle wrapping
                 #       Do we always generate LOOKAHEAD_WPS number of points? what to do
@@ -104,8 +100,8 @@ class WaypointUpdater(object):
                     #     lane.waypoints[0].twist.twist.linear.x,
                     #     decelerate_points_count)
                 
-                # generate up to the LOOKAHEAD_WPS number of waypoints
-                # fill it up with waypoints with zero velocity
+                #generate up to the LOOKAHEAD_WPS number of waypoints
+                #fill it up with waypoints with zero velocity
                 if decelerate_points_count < LOOKAHEAD_WPS:
                     for i in range(LOOKAHEAD_WPS - decelerate_points_count):
                         wp_new = Waypoint()
@@ -113,7 +109,6 @@ class WaypointUpdater(object):
                         wp_new.pose = wp_extract.pose
                         lane.waypoints.append(wp_new)
                         wp_new.twist.twist.linear.x = 0
-                        next_waypoint_index = (next_waypoint_index + 1) % number_waypoints
 
             else:
                 # now create the waypoints ahead
@@ -238,31 +233,6 @@ class WaypointUpdater(object):
         """
         return math.sqrt((p1.x - p2.x)**2 + (p1.y-p2.y)**2 + (p1.z-p2.z)**2)
 
-    def closest_waypoint_to_position(self, position):
-        """ Find the closest waypoint of a given position
-        Return: the waypoint index of the closest waypoint
-        """
-        min_distance = 999999 #some large number
-        min_distance_waypoint_index = 999999 #some large number
-        for i, waypoint in enumerate(self.current_waypoints):
-            distance = self.calc_position_distance(waypoint.pose.pose.position, position)
-            if distance < min_distance:
-                min_distance = distance
-                min_distance_waypoint_index = i
-        return min_distance_waypoint_index
-
-    def associate_trafficlights_to_waypoints(self, lights):
-        """ Associate each traffic light in a list to their closest waypoints
-        Args: lights - a list of traffic lights
-        Return: a list with the same size as lights where each element contains the closest waypoint index
-                of its corresponding traffic light
-        """
-        associations = []
-        for i, light in enumerate(lights):
-            wp_index = self.closest_waypoint_to_position(light.pose.pose.position)
-            associations.append(wp_index)
-        return associations
-
     def decelerate(self, waypoints):
         last = waypoints[-1]
         last.twist.twist.linear.x = 0.
@@ -274,34 +244,10 @@ class WaypointUpdater(object):
             wp.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
         return waypoints
 
-    def traffic_cb(self, msg):
-        """ Use the ground truth traffic light information to imitate what
-            an eventual working /traffic_waypoints call back should do
-        """
-        
-        # associate traffic lights to their closest waypoints
-        # only perform this if we have never done it yet
-        if self.current_waypoints != None:
-            if self.traffic_lights_waypoints == None:
-                self.traffic_lights_waypoints = self.associate_trafficlights_to_waypoints(msg.lights)
-
-        current_waypoint = self.closest_waypoint_to_position(self.current_pose.pose.position)
-
-        # do what the working /traffic_waypoint callback should do
-        found_redlight_waypoint_index = -1
-        for i, light in enumerate(msg.lights):
-            # if it's red light
-            if light.state == 0:
-                # calculate distance between car and red light
-                distance = self.calc_position_distance(light.pose.pose.position, self.current_pose.pose.position)
-                if distance < 30:
-                    # TODO: use phsyics to determine whether the traffic light is ahead
-                    if self.traffic_lights_waypoints[i] > current_waypoint:
-                        #rospy.logwarn("red light coming up in %s meters", distance)
-                        found_redlight_waypoint_index = self.traffic_lights_waypoints[i]
-        
-        self.redlight_waypoint_index = found_redlight_waypoint_index
-
+    def traffic_waypoint_cb(self, msg):
+        if self.redlight_waypoint_index != msg.data:
+            rospy.loginfo("traffic light status change to %s", msg.data)
+        self.redlight_waypoint_index = msg.data
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
