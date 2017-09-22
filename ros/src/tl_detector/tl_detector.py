@@ -47,6 +47,7 @@ class TLDetector(object):
         self.cropped_pub = rospy.Publisher("/crop_image",Image, queue_size=100) 
 
         self.bridge = CvBridge()
+	#TODO Markus Meyerhofe. Please uncomment in case classifier is up and running
         #self.light_classifier = TLClassifier()
         self.listener = tf.TransformListener()
 
@@ -292,6 +293,7 @@ class TLDetector(object):
 	    self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
             
         #Get classification
+	#TODO Markus Meyerhofer. Please change in case classifier is up and running
         #return self.light_classifier.get_classification(cv_cropped_image)
 	return TrafficLight.UNKNOWN
 
