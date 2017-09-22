@@ -9,7 +9,7 @@ class TLClassifier(object):
     def __init__(self):
         #TODO DONE load classifier
         self.debug_classifier = False
-        self.capture_images = True
+        self.capture_images = False
 
         rospack = rospkg.RosPack()
         self.imgPath = str(rospack.get_path('tl_detector'))+'/light_classification/pics/'
