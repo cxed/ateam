@@ -2,15 +2,14 @@
 from styx_msgs.msg import TrafficLight
 import tensorflow as tf
 import numpy as np
-import cv2, rospkg, rospy
+import cv2, rospkg, rospy, time
 from tensorflow.contrib.layers import flatten
 
 class TLClassifier(object):
     def __init__(self):
         #TODO DONE load classifier
-        self.debug_classifier = True
+        self.debug_classifier = False
         self.capture_images = True
-        self.i = 0
 
         rospack = rospkg.RosPack()
         self.imgPath = str(rospack.get_path('tl_detector'))+'/light_classification/pics/'
@@ -100,6 +99,12 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
+
+        if self.capture_images:
+            path = '/home/max/Pictures/'
+            cv2.imwrite(self.imgPath+str(int(time.clock()*1000))+'.jpg', image)
+            rospy.loginfo('[TLClassifier] Saved Image ... ')
+
         if self.debug_classifier:
             rospy.loginfo('[TL Classifier] invoked... ')
 
@@ -112,7 +117,7 @@ class TLClassifier(object):
             rospy.loginfo('[TL Classifier] assertion ok: ')
 
         res = None
-        res = cv2.resize(image ,None,fx=0.2, fy=0.2, interpolation = cv2.INTER_CUBIC)
+        res = cv2.resize(image, None,fx=0.2, fy=0.2, interpolation = cv2.INTER_CUBIC)
         image = res.reshape(1, 60, 40, 3)
         assert image.shape == (1, 60, 40, 3)
         if self.debug_classifier:
@@ -120,13 +125,10 @@ class TLClassifier(object):
         prediction = self.sess.run(self.logits, feed_dict={self.x: image})
         classification = np.argmax(prediction)
 
-        choices = {0: TrafficLight.GREEN, 1: TrafficLight.YELLOW, 2: TrafficLight.RED, 3: TrafficLight.UNKNOWN}
+        choices = {0: TrafficLight.RED, 1: TrafficLight.YELLOW, 2: TrafficLight.GREEN, 4: TrafficLight.UNKNOWN}
         result = choices.get(classification, TrafficLight.UNKNOWN)
 
         if self.debug_classifier:
             rospy.loginfo('[TL Classifier] ' + str(result) + ' detected')
-        if self.capture_images:
-            cv2.imwrite(self.imgPath+str(self.i)+'.jpg', image)
-            self.i += 1
 
         return  result
