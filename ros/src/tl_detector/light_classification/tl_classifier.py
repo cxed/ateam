@@ -1,19 +1,18 @@
 from styx_msgs.msg import TrafficLight
 import tensorflow as tf
+import numpy as np
 import cv2, rospkg, rospy
 from tl_classifier_trainer import TLClassifier_Trainer
 
 class TLClassifier(object):
     def __init__(self):
         #TODO load classifier
-        # helper vars
-        self.i = 0
-        self.debug = True
-        self.capture_images = False
+	self.i = 1000
+        self.debug_classifier = True
+        self.capture_images = True
 
-        rospack = rospkg.RosPack()
-        modelMetaFile = str(rospack.get_path('tl_detector'))+'/light_classification/model.meta'
-        modelCheckpointFile = str(rospack.get_path('tl_detector'))+'/light_classification/.'
+        self.rospack = rospkg.RosPack()
+        modelCheckpointFile = str(self.rospack.get_path('tl_detector'))+'/light_classification'
 
         self.x = tf.placeholder(tf.float32, (None, 60, 40, 3))
         self.y = tf.placeholder(tf.int32, (None))
@@ -22,9 +21,8 @@ class TLClassifier(object):
         self.saver = tf.train.Saver()
         self.init = tf.global_variables_initializer()
         self.sess = tf.Session()
-        self.saver = tf.train.import_meta_graph(modelMetaFile)
         self.saver.restore(self.sess, tf.train.latest_checkpoint(modelCheckpointFile))
-        
+
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
 
@@ -43,14 +41,14 @@ class TLClassifier(object):
         prediction = self.sess.run(self.logits, feed_dict={self.x: image})
         classification = np.argmax(prediction)
 
-        choices = {1: TrafficLight.GREEN, 2: TrafficLight.YELLOW, 3: TrafficLight.RED}
+        choices = {1: TrafficLight.GREEN, 2: TrafficLight.YELLOW, 3: TrafficLight.RED, 4: TrafficLight.UNKNOWN}
         result = choices.get(classification, TrafficLight.UNKNOWN)
-        
-        if self.debug:
-            rospy.loginfo('[TL Classifier] ' + result + ' detected')
+
+        if self.debug_classifier:
+            rospy.loginfo('[TL Classifier] ' + str(result) + ' detected')
         if self.capture_images:
-            imgPath = str(rospack.get_path('tl_detector'))+'/light_classification/pics/out/'
+            imgPath = str(self.rospack.get_path('tl_detector'))+'/light_classification/pics/'
             cv2.imwrite(imgPath+str(self.i)+'.jpg', image)
             self.i += 1
-        
-        return result
+
+        return TrafficLight.GREEN #result
