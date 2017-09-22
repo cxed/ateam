@@ -47,7 +47,7 @@ class TLDetector(object):
         self.cropped_pub = rospy.Publisher("/crop_image",Image, queue_size=100) 
 
         self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
+        #self.light_classifier = TLClassifier()
         self.listener = tf.TransformListener()
 
         self.state = TrafficLight.UNKNOWN
@@ -292,7 +292,8 @@ class TLDetector(object):
 	    self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
             
         #Get classification
-        return self.light_classifier.get_classification(cv_cropped_image)
+        #return self.light_classifier.get_classification(cv_cropped_image)
+	return TrafficLight.UNKNOWN
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
@@ -308,7 +309,7 @@ class TLDetector(object):
         #TODO - DONE - find the closest visible traffic light (if one exists)
         
         #Find where the vehicle is and safe it in car position
-        light_positions = self.config['light_positions']
+        light_positions = self.config['stop_line_positions']
         if self.pose:
             car_position = self.get_closest_waypoint(self.pose.pose)
             if car_position is not None:
@@ -400,7 +401,7 @@ class TLDetector(object):
             if car_position is not None:
                 self.last_car_position = car_position
 
-	#rospy.loginfo('[TLNode_Simu] Current car ' + str(car_position))
+	rospy.loginfo('[TLNode_Simu] Current car ' + str(self.last_car_position))
 
         # Attribute the light positions to waypoints
         light_pos_wp = []
@@ -452,7 +453,10 @@ class TLDetector(object):
                 state = self.lights[light_idx].state
 		#rospy.loginfo('[TLNode_Simu] Light is in state: '+ str(state))
 		#rospy.loginfo('[TLNode_Simu] Return values therefore: '+ str(light_num_wp)+ ' , '+str(state))
-                return light_num_wp, state
+		if (self.last_car_position<=light_num_wp-25):
+                	return light_num_wp-25, state
+		else:
+                	return -1, TrafficLight.UNKNOWN
             
         self.waypoints = None
         return -1, TrafficLight.UNKNOWN
