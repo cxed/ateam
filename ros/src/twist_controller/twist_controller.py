@@ -4,7 +4,6 @@ import rospy
 
 GAS_DENSITY = 2.858 # this is in kg / gallon it seems
 MPH_TO_MPS = 0.44704
-MAX_SPEED = 10 * MPH_TO_MPS # max speed for CARLA is 10 miles per hour - convert this to MPS
 MAX_STEERING = 0.43 # 25 degrees in radians
 
 
@@ -23,12 +22,15 @@ class Controller(object):
         self.min_speed = kwargs["min_speed"]
         self.refresh_rate = kwargs["refresh_rate"]
 
+        # get max speed from config
+        self.max_speed = rospy.get_param('/waypoint_updater/max_speed_mph', 10) * MPH_TO_MPS
+
         # create a refresh rate of 50 Hz
         #self.refresh_rate = 0.02
 
         # initialise PID controllers
         # for velocity, clamp the output to minimum 0 and maximum MAX_SPEED
-        self.linear_velocity_PID = PID(1.0, 0.1, 0.5, mn=0, mx=MAX_SPEED)
+        self.linear_velocity_PID = PID(1.0, 0.1, 0.5, mn=0, mx=self.max_speed)
 
         # for steering, clamp the output to +- 25 degrees (in radians)
         self.angular_velocity_PID = PID(5.0, 0.1,0.5,mn=-MAX_STEERING, mx=MAX_STEERING)

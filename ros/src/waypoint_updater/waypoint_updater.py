@@ -25,7 +25,6 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 
 LOOKAHEAD_WPS = 30 # Number of waypoints we will publish. You can change this number
 MPH_TO_MPS = 0.44704 # converions for miles per hour to meters per second
-MAX_SPEED = 10 * MPH_TO_MPS # max speed for CARLA is 10 miles per hour - convert this to MPS
 NARROW_SEARCH_RANGE = 10  # Number of waypoints to search current position back and forth
 MAX_DECEL = 1
 
@@ -49,6 +48,9 @@ class WaypointUpdater(object):
         # Waypoint index of a upcoming redlight, -1 if it does not exist
         self.redlight_waypoint_index = -1
 
+        # get max speed from config
+        self.max_speed = rospy.get_param('~max_speed_mph', 10) * MPH_TO_MPS
+
         rospy.spin()
 
     def pose_cb(self, msg):
@@ -64,7 +66,7 @@ class WaypointUpdater(object):
             next_waypoint_index = self.next_infront_waypoint()
 
             # set the target speed
-            target_speed = MAX_SPEED
+            target_speed = self.max_speed
 
             # set the number of waypoints received from /base_waypoints
             number_waypoints = len(self.current_waypoints)
