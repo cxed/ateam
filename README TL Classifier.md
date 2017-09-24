@@ -34,7 +34,7 @@ The classifier reads in the images from each directory; by knowing the directory
 
 * *self.debug = True*: set this to false to avoid ROS loginfo messages
 * *self.capture_images* = False: Set to True to store incoming images
-* *self.i = 0*: Helper variable. Used for image naming. Set the inital number to higher values if running image capturing multiple times (to avoid name clashes)
+
 
 ### Helper/Invoking the Classifier
 ***train.py***: short helper class. Use this if you need to invoke training. It just instantiates the training class and invokes training.  

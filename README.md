@@ -16,17 +16,19 @@ Project Due:
 Term Ends: 2017-10-16
 
 ```
-   September 2017         October 2017      
-Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa  
-                1  2   1  2  3  4  5  6  7  
- 3  4  5  6  7  8  9   8  9 10 11 12 13 14  
-10 11 12 13 14 15 16  15 16 17 18 19 20 21  
-17 18 19 20 21 22 23  22 23 24 25 26 27 28  
-24 25 26 27 28 29 30  29 30 31 
+Su Mo Tu We Th Fr Sa  
+10 11 12 13 14 15 16  
+17 18 19 20 21 22 23
+24 25 26 27 28 29 30  September 2017       
+ 1  2  3  4  5  6  7  October 2017      
+ 8  9 10 11 12 13 14  
+15 16 17 18 19 20 21  
 ```
 
-### Skype Call
-**Success!** 2017-09-10 1500UTC=0800PDT=1700U+2
+### Skype Calls
+* **Success!** 2017-09-10 1500UTC=0800PDT=1700U+2
+* **Success!** 2017-09-17 1500UTC=0900PDT=1800U+2
+* **PLANNED!** 2017-09-24 1500UTC=0900PDT=1800U+2
 
 ### Members
   - 0 Chris _@cxed_ UTC-7
@@ -37,17 +39,23 @@ Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa
 
 [Team Sign Up Spreadsheet](https://docs.google.com/spreadsheets/d/17I_0q8tylk9Q_Y3GTSq738KkBIoS6SUt1quR5lPPAdg/edit#gid=0)
 
-### Possible Division Of Labor
+### Sub Tasks
 * Team leader 0:
   - set up team resources (Slack, GitHub, Skype, etc),
   - documentation
   - coordination
   - testing
   - programming support
+  - removing tabs
 * Vince & William: waypoint updater a.k.a. getting the car moving at all.
-  - Hey guys, add your own details by modifying this section!
+  - making the car drive
+  - making the car drive smoothly
+  - making the car drive smoothly as long as we want
+  - stopping the car when told that's a good idea
+  - resuming the car when told that's a good idea
 * Andreas & Markus: tl_detector, working on the classifier.
-  - Hey guys, add your own details by modifying this section!
+  - detecting the state of any visible traffic lights
+  - deciding when a stop should be done based on traffic light state
 
 ## Project Components
 
@@ -69,6 +77,30 @@ Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa
 
 ![PID Tuning](http://support.motioneng.com/Downloads-Notes/Tuning/images/overshoot_flowchart.gif "PID Tuning")
 
+### Car Info
+* [ROS Interface to Lincoln MKZ DBW System](https://bitbucket.org/DataspeedInc/dbw_mkz_ros/src/)
+* throttle range = 0 to 1.0
+* Official docs on brake value says: `...units of torque (N*m). The
+  correct values for brake can be computed using the desired
+  acceleration, weight of the vehicle, and wheel radius.`
+* Carla is a https://en.wikipedia.org/wiki/Lincoln_MKZ
+  - Curb weight = 3,713-3,911 lb (1,684-1,774 kg)
+  - `/dbw_node/vehicle_mass`: 1080.0
+  - 726 g/L density of gas. 13.5gal=51.1Liters, max fuel mass=37.1kg
+  - 4 passengers = 280 kg
+  - Let's just say 2000kg for a deployed car.
+* Decel_Force(newtons) = Mass_car(kg) * Max_decel(meter/s^2) 
+* MaxBrakeTorque(newton * meter) = Decel_Force(newtons) * wheel_radius(meters) / 4 wheels
+* MaxBrakeTorque(newton * meter) = Mass_car(kg) * Max_decel(meter/s^2) * wheel_radius(meters) / 4 wheels
+* Wheel radius
+  - `rospy.get_param('~wheel_radius', 0.2413)` but...
+  - `/dbw_node/wheel_radius`: 0.335
+  - Chris independently calculated the wheel radius to be .340m
+  - ...so let's go with .335
+* MaxBrakeTorque
+  - (newton * meter) = 2000(kg) * 5(meter/s^2) * .335(meters) / 4 wheels
+  - MaxBrakeTorque= 837.5Nm
+
 ### Explicit Requirements
 * Code via GitHub
 * README.md
@@ -79,6 +111,21 @@ Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa
 2. DBW (Drive By Wire) Node
 3. Traffic Light Detection
 4. Waypoint Updater Node - full functionality.
+
+### Find Tabs To Eliminate
+
+```
+find . -iname '*py' | while read N; do echo "== $N"; grep $'\t' $N ; done
+```
+
+## Run
+
+```
+catkin_make && source devel/setup.sh && roslaunch launch/styx.launch
+rosbag play -l just_traffic_light.bag
+rqt_image_view /image_color
+rqt_console
+```
 
 
 ## References and Links
