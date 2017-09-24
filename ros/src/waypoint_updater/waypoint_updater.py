@@ -46,7 +46,7 @@ class WaypointUpdater(object):
         self.yaw = None
         self.last_waypoint_index = None
         # Waypoint index of a upcoming redlight, -1 if it does not exist
-        self.redlight_waypoint_index = -1
+        self.traffic_stop_waypoint_index = -1
 
         # get max speed from config
         self.max_speed = rospy.get_param('~max_speed_mph', 10) * MPH_TO_MPS
@@ -75,12 +75,12 @@ class WaypointUpdater(object):
             lane.header.frame_id = self.current_pose.header.frame_id
             lane.header.stamp = rospy.Time(0)
 
-            if self.redlight_waypoint_index != -1 and (self.redlight_waypoint_index - self.next_waypoint_index) < 15:
-                # TODO: how far do we stop before the traffic light? i.e. where
-                #       is the line that we are supposed to stop at? we only get the
-                #       position of the traffic light.
-                #       for now, use 20 waypoints before the traffic light waypoint
-                stop_waypoint_index = self.redlight_waypoint_index
+            if (self.traffic_stop_waypoint_index != -1 
+                and (self.traffic_stop_waypoint_index - self.next_waypoint_index) < 15):
+                
+                # we have decided that the waypoint published by the /traffic_waypoint 
+                # is where we need to stop the car at
+                stop_waypoint_index = self.traffic_stop_waypoint_index
 
                 # TODO: handle wrapping
                 #       Do we always generate LOOKAHEAD_WPS number of points? what to do
@@ -96,11 +96,6 @@ class WaypointUpdater(object):
                         wp_new.twist.twist.linear.x = target_speed
                         next_waypoint_index = (next_waypoint_index + 1) % number_waypoints
                     lane.waypoints = self.decelerate(lane.waypoints)
-
-                    # rospy.logwarn("next wp %s speed %s pts %s", 
-                    #     self.next_waypoint_index, 
-                    #     lane.waypoints[0].twist.twist.linear.x,
-                    #     decelerate_points_count)
                 
                 #generate up to the LOOKAHEAD_WPS number of waypoints
                 #fill it up with waypoints with zero velocity
@@ -247,9 +242,9 @@ class WaypointUpdater(object):
         return waypoints
 
     def traffic_waypoint_cb(self, msg):
-        if self.redlight_waypoint_index != msg.data:
+        if self.traffic_stop_waypoint_index != msg.data:
             rospy.loginfo("traffic light status change to %s", msg.data)
-        self.redlight_waypoint_index = msg.data
+        self.traffic_stop_waypoint_index = msg.data
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
