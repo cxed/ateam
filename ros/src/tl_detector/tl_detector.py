@@ -267,7 +267,6 @@ class TLDetector(object):
         if ((x is False) or (y is False)): # if not (x and y)?
             return TrafficLight.UNKNOWN
         else:
-<<<<<<< HEAD
             # Cropped for the classifier from Markus which would need to ingest bgr8 images that are of size 300x200 (Can be changed if needed)
 	    #height, width, channels = cv_image.shape
 	    #rospy.loginfo('[TLNode_Real] Image size ' + str(height)+','+str(width)+','+str(channels),)
@@ -295,7 +294,7 @@ class TLDetector(object):
 	    
 	    # A publisher to show the cropped images.
 	    self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
-=======
+
             # Cropped for the classifier from Markus which would need to ingest
             # bgr8 images that are of size 300x200 (Can be changed if needed)
             #height, width, channels = cv_image.shape
@@ -323,7 +322,6 @@ class TLDetector(object):
             
             # A publisher to show the cropped images.
             self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
->>>>>>> 622620bec52a7fba6f3895d0b7d8aac440874c8e
             
         #Get classification
         #TODO Markus Meyerhofer. Please change in case classifier is up and running
