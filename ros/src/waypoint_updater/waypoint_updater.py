@@ -33,7 +33,7 @@ class WaypointUpdater(object):
         rospy.init_node('waypoint_updater')
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
-        self.base_waypoints_sub = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
+        rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
         rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_waypoint_cb)
@@ -222,8 +222,6 @@ class WaypointUpdater(object):
     def waypoints_cb(self, waypoints):
         self.current_waypoints = waypoints.waypoints
         self.next_waypoint_index = None
-        # we only need the message once, unsubscribe as soon as we got the message
-        self.base_waypoints_sub.unregister()
 
     def calc_position_distance(self, p1, p2):
         """ Calculate distance between two positions
