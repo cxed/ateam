@@ -77,6 +77,29 @@ Su Mo Tu We Th Fr Sa
 
 ![PID Tuning](http://support.motioneng.com/Downloads-Notes/Tuning/images/overshoot_flowchart.gif "PID Tuning")
 
+### Car Info
+* throttle range = 0 to 1.0
+* Official docs on brake value says: `...units of torque (N*m). The
+  correct values for brake can be computed using the desired
+  acceleration, weight of the vehicle, and wheel radius.`
+* Carla is a https://en.wikipedia.org/wiki/Lincoln_MKZ
+  - Curb weight = 3,713-3,911 lb (1,684-1,774 kg)
+  - `/dbw_node/vehicle_mass`: 1080.0
+  - 726 g/L density of gas. 13.5gal=51.1Liters, max fuel mass=37.1kg
+  - 4 passengers = 280 kg
+  - Let's just say 2000kg for a deployed car.
+* Decel_Force(newtons) = Mass_car(kg) * Max_decel(meter/s^2) 
+* MaxBrakeTorque(newton * meter) = Decel_Force(newtons) * wheel_radius(meters) / 4 wheels
+* MaxBrakeTorque(newton * meter) = Mass_car(kg) * Max_decel(meter/s^2) * wheel_radius(meters) / 4 wheels
+* Wheel radius
+  - `rospy.get_param('~wheel_radius', 0.2413)` but...
+  - `/dbw_node/wheel_radius`: 0.335
+  - Chris independently calculated the wheel radius to be .340m
+  - ...so let's go with .335
+* MaxBrakeTorque
+  - (newton * meter) = 2000(kg) * 5(meter/s^2) * .335(meters) / 4 wheels
+  - MaxBrakeTorque= 837.5Nm
+
 ### Explicit Requirements
 * Code via GitHub
 * README.md
@@ -91,7 +114,7 @@ Su Mo Tu We Th Fr Sa
 ### Find Tabs To Eliminate
 
 ```
-find . -iname '*py' | while read N; do echo "==== $N"; grep -R $'\t' $N ; done
+find . -iname '*py' | while read N; do echo "== $N"; grep $'\t' $N ; done
 ```
 
 ## Run

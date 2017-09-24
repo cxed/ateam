@@ -77,37 +77,21 @@ class DBWNode(object):
         self.loop()
 
     def loop(self):
-        # You should only publish the control commands if dbw is enabled
-        # if <dbw is enabled>:
-        #   self.publish(throttle, brake, steer)
-        # throttle = 0.5 # Range 0 to 1.
-        # Official docs say: "...units of torque (N*m). The correct values
-        # for brake can be computed using the desired acceleration, weight
-        # of the vehicle, and wheel radius."
-        # /dbw_node/vehicle_mass: 1080.0
-        # Carla = https://en.wikipedia.org/wiki/Lincoln_MKZ
-        # Curb weight = 3,713-3,911 lb (1,684-1,774 kg)
-        # Decel_Force(newtons) = Mass_car(kg) * Max_decel(meter/s^2) 
-        # MaxBrakeTorque(newton*meter) = Decel_Force(newtons) * wheel_radius(meters) / 4 wheels
-        # MaxBrakeTorque(newton*meter) = Mass_car(kg) * Max_decel(meter/s^2) * wheel_radius(meters) / 4 wheels
-        # 726 g/L density of gas. 13.5gal=51.1Liters, max fuel mass=37.1kg
-        # 4 passengers = 280 kg
-        # Let's just say 2000kg for a deployed car.
-        # Note that rospy.get_param('~wheel_radius', 0.2413) but...
-        # /dbw_node/wheel_radius: 0.335
-        # (Chris independently calculated the wheel radius to be .340m, so let's go with .335)
-        # MaxBrakeTorque(newton*meter) = 2000(kg) * 5(meter/s^2) * .335(meters) / 4 wheels
-        # MaxBrakeTorque= 837.5Nm
-
+        '''Main publishing of car controls if car should be controlled.'''
         rate = rospy.Rate(self.refresh_rate)
         while not rospy.is_shutdown():
             # preliminary attempt to get car moving
             # block multiple calls if the velocity has already been set
-            # TODO add dbw_enabled
-            if self.current_linear_velocity is None or self.target_linear_velocity is None:
+            #if self.current_linear_velocity is None or self.target_linear_velocity is None:
+            if (not self.dbw_enabled
+             or not self.current_linear_velocity
+             or not self.target_linear_velocity):
                 continue
 
-            throttle,brake,steer = self.controller.control(self.current_linear_velocity,self.current_angular_velocity,self.target_linear_velocity,self.target_angular_velocity)
+            throttle,brake,steer = self.controller.control(self.current_linear_velocity,
+                                                           self.current_angular_velocity,
+                                                           self.target_linear_velocity,
+                                                           self.target_angular_velocity)
             self.publish(throttle, brake, steer)
             
             rate.sleep()
