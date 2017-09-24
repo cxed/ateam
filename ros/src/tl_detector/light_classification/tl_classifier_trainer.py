@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os, cv2
 import numpy as np
 import random as rnd
@@ -10,25 +9,25 @@ from tensorflow.contrib.layers import flatten
 class TLClassifier_Trainer:
     def __init__(self):
         self.debug = False
+        self.show_epochs = True
         self.green_images = []
         self.yellow_images = []
         self.red_images = []
-        self.unknown_images = []
-        self.X_train = np.ndarray(shape=(0, 60, 40, 3))
+        self.X_train = np.ndarray(shape=(0, 150, 100, 3))
         self.Y_train = np.ndarray(shape=(0))
-        self.EPOCHS = 50
-        self.BATCH_SIZE = 256
+        dir = './combined_pics'
+        self.set_image_paths(dir + '/GREEN/', 
+                dir + '/YELLOW/', 
+                dir + '/RED/')
+        self.EPOCHS = 300
+        self.BATCH_SIZE = 2048
 
     # scale images depending on extension/image type
     def load_image(self, image_path):
         
-        try:
-            image = cv2.imread(image_path)
-            image = cv2.resize(image,None,fx=0.2, fy=0.2, interpolation = cv2.INTER_CUBIC)
-        except (Exception):
-            print("unknown cv2 exception")
-            return
-            
+        image = cv2.imread(image_path) 
+        image = cv2.resize(image,None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
+
         # scale image (0-255)
         if image_path[-4:] == '.png':
             image = image.astype(np.float32)*255
@@ -40,7 +39,7 @@ class TLClassifier_Trainer:
     
         return image
 
-    def set_image_paths(self, green_file_path, yellow_file_path, red_file_path, unknown_file_path):
+    def set_image_paths(self, green_file_path, yellow_file_path, red_file_path):
         
         # add images
         images = []
@@ -51,8 +50,7 @@ class TLClassifier_Trainer:
                 image = self.load_image(green_file_path + green_image_path)
                 self.green_images.append(image)
                 images.append(image)
-                labels.append(1)
-                #print(image.shape)
+                labels.append(0)
     
         yellow_images=os.listdir(yellow_file_path) 
         for yellow_image_path in yellow_images:
@@ -60,7 +58,7 @@ class TLClassifier_Trainer:
                 image = self.load_image(yellow_file_path + yellow_image_path)
                 self.yellow_images.append(image)
                 images.append(image)
-                labels.append(2)
+                labels.append(1)
                             
         red_images=os.listdir(red_file_path) 
         for red_image_path in red_images:
@@ -68,30 +66,23 @@ class TLClassifier_Trainer:
                 image = self.load_image(red_file_path + red_image_path)
                 self.red_images.append(image)
                 images.append(image)
-                labels.append(3)
-    
-        unknown_images=os.listdir(unknown_file_path) 
-        for unknown_image_path in unknown_images:
-            if type(unknown_image_path)==type("string"):
-                image = self.load_image(unknown_file_path + unknown_image_path)
-                self.unknown_images.append(image)
-                images.append(image)
-                labels.append(4)
-        
+                labels.append(2)
+
         self.X_train = np.array(images)
         # zero center
         #self.X_train = (self.X_train - self.X_train.mean())
         self.Y_train = np.array(labels)
-                
-    def LeNet(self, x):    
+               
+    def LeNet(self, x):  
+ 
         # Hyperparameters
         mu = 0
         sigma = 0.01
         Padding='VALID'
         W_lambda = 3.0
     
-        conv1_W = tf.Variable(tf.truncated_normal(shape=(6, 4, 3, 80), mean = mu, stddev = sigma))
-        conv1_b = tf.Variable(tf.zeros(80))
+        conv1_W = tf.Variable(tf.truncated_normal(shape=(60, 40, 3, 8), mean = mu, stddev = sigma))
+        conv1_b = tf.Variable(tf.zeros(8))
         conv1   = tf.nn.conv2d(x, conv1_W, strides=[1, 1, 1, 1], padding=Padding) + conv1_b
         if self.debug:
             print("x shape: ", x.shape)
@@ -115,8 +106,8 @@ class TLClassifier_Trainer:
             print("conv1 (after Pooling 1) shape: ", conv1.shape)
     
         # Layer 2: Convolutional...
-        conv2_W = tf.Variable(tf.truncated_normal(shape=(6, 4, 80, 16), mean = mu, stddev = sigma))
-        conv2_b = tf.Variable(tf.zeros(16))
+        conv2_W = tf.Variable(tf.truncated_normal(shape=(30, 20, 8, 32), mean = mu, stddev = sigma))
+        conv2_b = tf.Variable(tf.zeros(32))
         conv2   = tf.nn.conv2d(conv1, conv2_W, strides=[1, 1, 1, 1], padding=Padding) + conv2_b
         if self.debug:
             print("conv2_W shape: ", conv2_W.shape)
@@ -131,19 +122,19 @@ class TLClassifier_Trainer:
         # Activation.
         conv2 = tf.nn.relu(conv2)
         if self.debug:
-            print("conv2 shapea fter activation: ", conv2.shape)
+            print("conv2 shape after activation: ", conv2.shape)
     
         # Pooling...
         conv2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding=Padding)
         if self.debug:
             print("conv2 shape after pooling: ", conv2.shape)
-    
+
         # Flatten...
         fc0   = flatten(conv2)
     
         # Layer 3: Fully Connected...
-        fc1_W = tf.Variable(tf.truncated_normal(shape=(1232,240), mean = mu, stddev = sigma))
-        fc1_b = tf.Variable(tf.zeros(240))
+        fc1_W = tf.Variable(tf.truncated_normal(shape=(1280, 120), mean = mu, stddev = sigma))
+        fc1_b = tf.Variable(tf.zeros(120))
         
         if self.debug:
             print("fc0", fc0.shape)
@@ -159,7 +150,7 @@ class TLClassifier_Trainer:
             print("fc1 after Activation", fc1.shape)
     
         # Layer 4: Fully Connected...
-        fc2_W  = tf.Variable(tf.truncated_normal(shape=(240, 84), mean = mu, stddev = sigma))
+        fc2_W  = tf.Variable(tf.truncated_normal(shape=(120, 84), mean = mu, stddev = sigma))
         fc2_b  = tf.Variable(tf.zeros(84))
         fc2    = tf.matmul(fc1, fc2_W) + fc2_b
         if self.debug:
@@ -172,9 +163,9 @@ class TLClassifier_Trainer:
         if self.debug:
             print("fc2 shape after activation: ", fc2.shape)
     
-        # Layer 5: Fully Connected. Input = 84. Output = 4.
-        fc3_W  = tf.Variable(tf.truncated_normal(shape=(84, 4), mean = mu, stddev = sigma))
-        fc3_b  = tf.Variable(tf.zeros(4))
+        # Layer 5: Fully Connected. Input = 84. Output = 3.
+        fc3_W  = tf.Variable(tf.truncated_normal(shape=(84, 3), mean = mu, stddev = sigma))
+        fc3_b  = tf.Variable(tf.zeros(3))
         logits = tf.matmul(fc2, fc3_W) + fc3_b
         if self.debug:
             print("fc3_W shape: ", fc3_W.shape)
@@ -184,7 +175,6 @@ class TLClassifier_Trainer:
         return logits
     
     def train(self):
-        self.set_image_paths('./pics/GREEN/', './pics/YELLOW/', './pics/RED/', './pics/UNKNOWN/')
         
         def evaluate(X_data, Y_data):
             num_examples = len(X_data)
@@ -202,14 +192,13 @@ class TLClassifier_Trainer:
         X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=0)
         
         ### Train model
-        x = tf.placeholder(tf.float32, (None, 60, 40, 3))
+        x = tf.placeholder(tf.float32, (None, 150, 100, 3))
         y = tf.placeholder(tf.int32, (None))
-        one_hot_y = tf.one_hot(self.Y_train, 4)
+        one_hot_y = tf.one_hot(self.Y_train, 3)
 
         rate = 0.0001
 
         logits = self.LeNet(tf.cast(self.X_train, tf.float32))
-        #print("X_train shape: ", self.X_train)
 
         cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=one_hot_y)
         loss_operation = tf.reduce_mean(cross_entropy)
@@ -235,14 +224,15 @@ class TLClassifier_Trainer:
                     sess.run(training_operation, feed_dict={x: batch_x, y: batch_y})
             
                 validation_accuracy = evaluate(X_val, Y_val)
-                if self.debug:
+                if self.show_epochs:
                     print("EPOCH {} ...".format(i+1), "Accuracy = {:.6f}".format(validation_accuracy))
                 if i > self.EPOCHS*2/3:
                     rate = 0.00001
         
             saver.save(sess, './model')
             print("Model saved")
+        sess.close()
 
-#trainer = TLClassifier_Trainer()
-#trainer.train()
+trainer = TLClassifier_Trainer()
+trainer.train()
 
