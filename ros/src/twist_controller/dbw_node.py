@@ -84,8 +84,8 @@ class DBWNode(object):
             # block multiple calls if the velocity has already been set
             #if self.current_linear_velocity is None or self.target_linear_velocity is None:
             if (not self.dbw_enabled
-             or not self.current_linear_velocity
-             or not self.target_linear_velocity):
+                or self.current_linear_velocity is None
+                or self.target_linear_velocity is None):
                 continue
 
             throttle,brake,steer = self.controller.control(self.current_linear_velocity,
