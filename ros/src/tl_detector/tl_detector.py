@@ -63,11 +63,11 @@ class TLDetector(object):
         self.IGNORE_FAR_LIGHT_SIMULATOR_DATA_COLLECTION = 25.0
         self.IGNORE_FAR_LIGHT_SIMULATOR = 50.0
         self.IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR = 1.0
-        self.simulator_debug_mode = 0
+        self.simulator_debug_mode = 1
         self.simulator_classifier_mode = 0
-        self.realimages_classifier_mode = 1
+        self.realimages_classifier_mode = 0
         self.save_images_simulator = 0
-        self.save_images_real = 1
+        self.save_images_real = 0
 
         rospy.spin()
 
@@ -271,7 +271,9 @@ class TLDetector(object):
 	    #rospy.loginfo('[TLNode_Real] Image size ' + str(height)+','+str(width)+','+str(channels),)
 	    cv_cropped_image = cv_image.copy()
 	    if (self.simulator_classifier_mode==1):
-            	cv_cropped_image = cv_image[(y-150):(y+150),(x-100):(x+100)]
+            	#cv_cropped_image = cv_image[(y-150):(y+150),(x-100):(x+100)]
+        	cv_cropped_image = cv_image[(y-225):(y+225),(x-150):(x+150)]
+	    	cv_cropped_image = cv2.resize(cv_cropped_image,(200,300),interpolation = cv2.INTER_CUBIC)
 	    if (self.realimages_classifier_mode==1):
         	cv_cropped_image = cv_image[(y-375):(y+375),(x-250):(x+250)]
 	    	cv_cropped_image = cv2.resize(cv_cropped_image,(200,300),interpolation = cv2.INTER_CUBIC)
