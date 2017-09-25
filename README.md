@@ -28,7 +28,8 @@ Su Mo Tu We Th Fr Sa
 ### Skype Calls
 * **Success!** 2017-09-10 1500UTC=0800PDT=1700U+2
 * **Success!** 2017-09-17 1500UTC=0900PDT=1800U+2
-* **PLANNED!** 2017-09-24 1500UTC=0900PDT=1800U+2
+* **Success!** 2017-09-24 1500UTC=0900PDT=1800U+2
+* **Possible** 2017-09-29 1430UTC=0830PDT=1730U+2
 
 ### Members
   - 0 Chris _@cxed_ UTC-7
@@ -127,7 +128,6 @@ rqt_image_view /image_color
 rqt_console
 ```
 
-
 ## References and Links
 * [CarND-Capstone Repo](https://github.com/udacity/CarND-Capstone)
 * [VM image](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/7e3627d7-14f7-4a33-9dbf-75c98a6e411b/concepts/8c742938-8436-4d3d-9939-31e40284e7a6?contentVersion=1.0.0&contentLocale=en-us)
@@ -158,3 +158,6 @@ And in a similar theme...
 > -- #kostas.oreopoulos 2017-09-07
 
 [?](https://discussions.udacity.com/t/units-for-ros-topics-in-the-final-project/360954/1)
+=======
+5. Confirm that traffic light detection works on real life images
+>>>>>>> CarND-Capstone/master
