@@ -114,6 +114,10 @@ class DBWNode(object):
 
     
     def extract_dbw_status(self, msg):
+        # reset the controller if dbw is switched off
+        if self.dbw_enabled == True and msg.data == False:
+            self.controller.reset()
+
         # extract the boolean status of the dbw from the msg
         self.dbw_enabled = msg.data
 

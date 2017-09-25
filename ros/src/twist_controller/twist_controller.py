@@ -37,6 +37,10 @@ class Controller(object):
         
         # create a yaw controller
         self.yaw_controller = YawController(self.wheel_base, self.steer_ratio, self.min_speed, self.max_lat_accel, self.max_steer_angle)
+
+    def reset(self):
+        self.linear_velocity_PID.reset()
+        self.angular_velocity_PID.reset()
         
 
     def control(self, current_linear_velocity, current_angular_velocity, target_linear_velocity,  target_angular_velocity):
