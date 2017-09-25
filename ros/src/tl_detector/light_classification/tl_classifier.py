@@ -10,7 +10,7 @@ class TLClassifier(object):
     def __init__(self):
         #TODO DONE load classifier
         self.debug = False
-        self.capture_images = False
+        self.capture_images = True
         self.verbose = True
 
         rospack = rospkg.RosPack()
@@ -25,15 +25,16 @@ class TLClassifier(object):
         self.sess = tf.Session()        
         saver.restore(self.sess, tf.train.latest_checkpoint(modelCheckpointFile))
 
-        self.waypoint = None
-        self.traffic_waypoint_sub = rospy.Subscriber('/traffic_waypoint', Int32, self.get_traffic_waypoint)
+        if self.verbose:
+            self.waypoint = None
+            self.traffic_waypoint_sub = rospy.Subscriber('/traffic_waypoint', Int32, self.get_traffic_waypoint)
 
         if self.debug:
             rospy.loginfo('[TL Classifier] constructor completed: ')
 
     def __del__(self):
-        base_waypoints_sub.unregister()
-        
+        if self.verbose:
+            self.traffic_waypoint_sub.unregister()
 
     def LeNet(self, x):    
         # Hyperparameters
@@ -96,6 +97,9 @@ class TLClassifier(object):
         fc3_b  = tf.Variable(tf.zeros(3))
         logits = tf.matmul(fc2, fc3_W) + fc3_b
 
+        if self.debug:
+            print('[TL Classifier] done with logits... ')
+
         return logits
 
     def get_classification(self, image):
@@ -109,12 +113,7 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
-
-        if self.capture_images:
-            path = '/home/max/Pictures/'
-            cv2.imwrite(self.imgPath+str(int(time.clock()*1000))+'.jpg', image)
-            rospy.loginfo('[TLClassifier] Saved Image ... ')
-
+        save_image = image
         if self.debug:
             rospy.loginfo('[TL Classifier] invoked... ')
 
@@ -150,13 +149,22 @@ class TLClassifier(object):
         choices = {0: TrafficLight.GREEN, 1: TrafficLight.YELLOW, 2: TrafficLight.RED}
         result = choices.get(classification, TrafficLight.UNKNOWN)
 
+        if self.capture_images:
+            strings = {0: "GREEN/", 1: "YELLOW/", 2: "RED/"}
+            path = strings.get(classification, "UNKNOWN/")
+            savePath = self.imgPath + path
+            cv2.imwrite(savePath+str(int(time.clock()*1000))+'.jpg', save_image)
+            rospy.loginfo('[TLClassifier] Saved Image ... ' + savePath)
+
         if self.verbose:
             strings = {0: "GREEN", 1: "YELLOW", 2: "RED"}
             classification_result = strings.get(classification, "UNKNOWN")
             wp = "None Published"
+            rospy.loginfo('[TL Classifier] waypoint: ' + str(self.waypoint))
             if self.waypoint != None:
                 wp = str(self.waypoint)
-            rospy.loginfo('[TL Classifier] ' + classification_result + ' detected with certainty: ' + str(certainty) + ' Waypoint: ' + wp)
+            rospy.loginfo('[TL Classifier] Classifier: ' + classification_result + ' detected with certainty: ' + str(certainty))
+            rospy.loginfo('[TL Classifier] /traffic/waypoint: ' + wp)
 
         return  result
 
