@@ -10,6 +10,7 @@ class TLClassifier(object):
         #TODO DONE load classifier
         self.debug = False
         self.capture_images = False
+        self.verbose = False
 
         rospack = rospkg.RosPack()
         self.imgPath = str(rospack.get_path('tl_detector'))+'/light_classification/pics/'
@@ -33,7 +34,7 @@ class TLClassifier(object):
         W_lambda = 3.0
 
         if self.debug:
-                print('[TL Classifier] input shape: ', x.shape)
+            print('[TL Classifier] input shape: ', x.shape)
     
         conv1_W = tf.Variable(tf.truncated_normal(shape=(60, 40, 3, 8), mean = mu, stddev = sigma))
         conv1_b = tf.Variable(tf.zeros(8))
@@ -140,7 +141,9 @@ class TLClassifier(object):
         choices = {0: TrafficLight.GREEN, 1: TrafficLight.YELLOW, 2: TrafficLight.RED}
         result = choices.get(classification, TrafficLight.UNKNOWN)
 
-        if self.debug:
-            rospy.loginfo('[TL Classifier] ' + str(result) + ' detected')
+        if self.verbose:
+            strings = {0: "GREEN", 1: "YELLOW", 2: "RED"}
+            result = strings.get(classification, TrafficLight.UNKNOWN)
+            rospy.loginfo('[TL Classifier] ' + str(result) + ' detected. Certainty: ' + str(certainty))
 
         return  result
