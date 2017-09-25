@@ -143,7 +143,9 @@ class TLClassifier(object):
 
         if self.verbose:
             strings = {0: "GREEN", 1: "YELLOW", 2: "RED"}
-            result = strings.get(classification, TrafficLight.UNKNOWN)
-            rospy.loginfo('[TL Classifier] ' + str(result) + ' detected. Certainty: ' + str(certainty))
+            classification_result = strings.get(classification, TrafficLight.UNKNOWN)
+	    given = rospy.Publisher('/traffic_waypoint', Int32, queue_size=0)
+	    should_be = strings.get(given, TrafficLight.UNKNOWN)
+	    rospy.loginfo('[TL Classifier] ' + str(classification_result) + ' detected with certainty: ' + str(certainty) + ' Expected: ' + str(should_be) )
 
         return  result
