@@ -43,7 +43,6 @@ class TLDetector(object):
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=0)
         # A publisher to show us the cropped images. Maybe disable when no longer needed.
-        # Refer to styx/conf.py for more hints.
         self.cropped_pub = rospy.Publisher("/crop_image",Image, queue_size=100) 
 
         self.bridge = CvBridge()
@@ -55,14 +54,23 @@ class TLDetector(object):
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
-        
+
+        #Self introduced variables being used below in the code
+        #Waypoint variables making sure we always know where we are even if a message once gets missed        
         self.best_waypoint = 0
         self.last_car_position = 0
-        self.last_light_pos_wp = []
+        self.last_light_pos_waypoints = []
+
+        #Variables that make sure the light is not being considered if its way out
         self.IGNORE_FAR_LIGHT_REAL = 21.5
         self.IGNORE_FAR_LIGHT_SIMULATOR_DATA_COLLECTION = 25.0
         self.IGNORE_FAR_LIGHT_SIMULATOR = 50.0
         self.IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR = 1.0
+
+        #Variables for configuring this script:
+        #simulator_debug_mode = 1 is for using the script with the results from /vehicle/traffic_lights
+        #simulator_classifier_mode = is for using the script with the simulator with a classifier working
+        #simulator_classifier_mode = is for using the script with the real images from the bagfiles with a classifier working
         self.simulator_debug_mode = 1
         self.simulator_classifier_mode = 0
         self.realimages_classifier_mode = 0
@@ -86,12 +94,11 @@ class TLDetector(object):
 
         self.has_image = True
         self.camera_image = msg
-        #rospy.loginfo('[TLNode] Start of TL Node')
+        #Start of the node since and image came in. Take different branch depending on the configuration
         if self.simulator_debug_mode==1:
             light_wp, state = self.process_traffic_lights_simulation()
         elif ((self.realimages_classifier_mode==1 or self.simulator_classifier_mode==1) and (self.simulator_debug_mode==0)):
             light_wp, state = self.process_traffic_lights()
-        #rospy.loginfo('[TLNode] End of process traffic lights with result' + str(state) + str(light_wp))
 
         '''
         Publish upcoming red lights at camera frequency.
@@ -102,12 +109,10 @@ class TLDetector(object):
         if self.state != state:
             self.state_count = 0
             self.state = state
-            #rospy.loginfo('[TLNode_Simu] End of TL Node. Detected change in traffic light but will need more confirmations before publishing in case its a redlight')
         if self.state_count >= STATE_COUNT_THRESHOLD:
             self.last_state = self.state
             light_wp = light_wp if state == TrafficLight.RED else -1
             self.last_wp = light_wp
-            #rospy.loginfo('[TLNode_Simu] End of TL Node publishing upcoming redlight at waypoint ' + str(light_wp) + str(state))
             self.upcoming_red_light_pub.publish(Int32(light_wp))
 
         if self.state_count < STATE_COUNT_THRESHOLD:        
@@ -150,8 +155,8 @@ class TLDetector(object):
         if self.waypoints is not None:
             waypoints = self.waypoints.waypoints
             min_dist = self.distance(pose.position, waypoints[0].pose.pose.position)
-            for i, point in enumerate(waypoints):
-                dist = self.distance(pose.position, point.pose.pose.position)
+            for i in range(len(waypoints)):
+                dist = self.distance(pose.position, waypoints[i].pose.pose.position)
                 if dist < min_dist:
                     best_waypoint = i
                     min_dist = dist
@@ -207,16 +212,17 @@ class TLDetector(object):
         # Determine car heading via quaternion to Euler conversion
         car_heading=self.Quaternion_toEulerianAngle(x_,y_,z_,w_)
 
+        # Get the points in the world
         Lwx=point_in_world[0]
         Lwy=point_in_world[1]
 
-        # How far stoplight is ahead of car.
+        # How far is the stoplight ahead of the car. Do calculate it by simply using normal algebra
         Lcx = (Lwy-self.pose.pose.position.y)*math.sin(math.radians(car_heading))-(self.pose.pose.position.x-Lwx)*math.cos(math.radians(car_heading))
-        # How far stoplight is laterally over from car's current path.
+        # How far is the stoplight laterally over from car's current path.Do calculate it by simply using normal algebra
         Lcy = (Lwy-self.pose.pose.position.y)*math.cos(math.radians(car_heading))-(Lwx-self.pose.pose.position.x)*math.sin(math.radians(car_heading))
 
         #Object point is already in car coordinate system now
-        objectPoints = np.array([[float(Lcx), float(Lcy), 0.0]], dtype=np.float32)
+        objectPoints = np.array([[float(Lcx), float(Lcy), 5.0]], dtype=np.float32)
 
         #set transfromations zero as everything is in car cosy
         rvec = (0,0,0)
@@ -228,14 +234,16 @@ class TLDetector(object):
                                  [ 0,  0, 1             ]])
         distCoeffs = None
 
-        # Same as simple screen projection given aligned system.
+        # Same as simple screen projection given aligned system. !! we do not do any real transformation as rvec and tvec are zeroe
         ret, _ = cv2.projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs)
 
+	#Get the points in world on pixel coordinates
         x = int(ret[0,0,0])
         y = int(ret[0,0,1])
 
+	# check if x,y basically is not on the screen. and if so just return false as something is wrong
         if x>(image_width) or y>(image_height):
-            return (False, False) # basically, it's not on the screen.
+            return (False, False) 
         else:
             return (x,y)
 
@@ -256,30 +264,27 @@ class TLDetector(object):
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
 
+        #Invoke projection only for the simulator where this works reasonably well for the bagfiles just take the middle of the image and crop around that
         if (self.simulator_classifier_mode==1):
             x, y = self.project_to_image_plane(light)
         if (self.realimages_classifier_mode==1):
             x, y =  684, 548
 
-        rospy.loginfo('[TLNode_Real] Projected points '+str(x)+' '+str(y))
-
         #TODO - DONE - use light location to zoom in on traffic light in image
         if ((x is False) or (y is False)): # if not (x and y)?
             return TrafficLight.UNKNOWN
         else:
-            # Cropped for the classifier from Markus which would need to ingest bgr8 images that are of size 300x200 (Can be changed if needed)
-	    #height, width, channels = cv_image.shape
-	    #rospy.loginfo('[TLNode_Real] Image size ' + str(height)+','+str(width)+','+str(channels),)
+            # Cropped around the traffic light for the classifier from Markus which would need to ingest bgr8 images that are of size 300x200 (Can be changed if needed)
+	    # Crops are different for bagfiles and simulator as the image size is different
 	    cv_cropped_image = cv_image.copy()
 	    if (self.simulator_classifier_mode==1):
-            	#cv_cropped_image = cv_image[(y-150):(y+150),(x-100):(x+100)]
         	cv_cropped_image = cv_image[(y-225):(y+225),(x-150):(x+150)]
 	    	cv_cropped_image = cv2.resize(cv_cropped_image,(200,300),interpolation = cv2.INTER_CUBIC)
 	    if (self.realimages_classifier_mode==1):
         	cv_cropped_image = cv_image[(y-375):(y+375),(x-250):(x+250)]
 	    	cv_cropped_image = cv2.resize(cv_cropped_image,(200,300),interpolation = cv2.INTER_CUBIC)
 
-
+            #This gets only taken if one wants to save images for the classifier training. Not being used in end system
 	    if(self.save_images_simulator==1):
             	self.time=time.clock()
 		path = '/home/student/Pictures/simulated/'
@@ -294,34 +299,6 @@ class TLDetector(object):
 	    
 	    # A publisher to show the cropped images.
 	    self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
-
-            # Cropped for the classifier from Markus which would need to ingest
-            # bgr8 images that are of size 300x200 (Can be changed if needed)
-            #height, width, channels = cv_image.shape
-            #rospy.loginfo('[TLNode_Real] Image size ' + str(height)+','+str(width)+','+str(channels),)
-            cv_cropped_image = cv_image.copy()
-            if (self.simulator_classifier_mode==1):
-                    cv_cropped_image = cv_image[(y-150):(y+150),(x-100):(x+100)]
-            if (self.realimages_classifier_mode==1):
-                cv_cropped_image = cv_image[(y-375):(y+375),(x-250):(x+250)]
-                cv_cropped_image = cv2.resize(cv_cropped_image,(200,300),interpolation = cv2.INTER_CUBIC)
-
-
-            if(self.save_images_simulator==1):
-                self.time=time.clock()
-                # This will break if the user is not `student`. Maybe `os.getlogin()`.
-                path = '/home/student/Pictures/simulated/'
-                cv2.imwrite(path+str(int(self.time*1000))+'.jpg',cv_cropped_image)
-                rospy.loginfo('[TLNode_Real] Saved Image from simulator ')
-
-            if(self.save_images_real==1):
-                self.time=time.clock()
-                path = '/home/student/Pictures/bagfiles/'
-                cv2.imwrite(path+str(int(self.time*1000))+'.jpg',cv_cropped_image)
-                rospy.loginfo('[TLNode_Real] Saved Image from bagfile ')
-            
-            # A publisher to show the cropped images.
-            self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
             
         #Get classification
         #TODO Markus Meyerhofer. Please change in case classifier is up and running
@@ -348,39 +325,39 @@ class TLDetector(object):
             if car_position is not None:
                 self.last_car_position = car_position
         
-        # Attribute the light positions to waypoints
-        light_pos_wp = []
+        # Attribute the light positions to waypoints to use this in later steps
+        light_pos_waypoints = []
         if self.waypoints is not None:
-            wp = self.waypoints
+            temp_waypoints = self.waypoints
             for i in range(len(light_positions)):
-                # FIX: See note in get_closest_waypoint_light. l_pos can't be a list!
-                # cxe: I just changed distance function to handle both. Maybe a bad idea.
-                # AJankl: Put it back to the state from my implmentation lpos is not a list
-                # cause it says light_positions[i] so its only one element of the array
-                l_pos = self.get_closest_waypoint_light(wp, light_positions[i])
-                light_pos_wp.append(l_pos)
-            self.last_light_pos_wp = light_pos_wp
+                l_pos = self.get_closest_waypoint_light(temp_waypoints, light_positions[i])
+                light_pos_waypoints.append(l_pos)
+            self.last_light_pos_waypoints = light_pos_waypoints
         else:
-            light_pos_wp = self.last_light_pos_wp
+            light_pos_waypoints = self.last_light_pos_waypoints
             
         # Get the id of the next light
-        if len(light_pos_wp) is not 0:
-                if self.last_car_position > max(light_pos_wp):
-                     light_num_wp = min(light_pos_wp)
+        if len(light_pos_waypoints) is not 0:
+	        # This branch gets taken in case the vehicle is almost through the loop. After the last light.
+                # Then the next light can only be the one that comes first in the loop.
+                if self.last_car_position > max(light_pos_waypoints):
+                     closest_light_wp = min(light_pos_waypoints)
+                #This branch gets taken to determine the closest car when its unclear which it is. It calculates the difference between the waypoint of the light and the car and takes the one that is closest to the car but it can't be behind the car then it gets an arbitrary high value in in waypoint difference so it won't get taken
                 else:
-                    light_delta = light_pos_wp[:]
-                    light_delta[:] = [x - self.last_car_position for x in light_delta]
-                    light_num_wp = min(i for i in light_delta if i >= 0) + self.last_car_position
+                    waypoint_difference = []
+                    for i in range(len(light_pos_waypoints)):
+			difference = light_pos_waypoints[i]-car_position
+                        if(difference >=0):
+                            waypoint_difference.append(difference)
+                        else:
+                            waypoint_difference.append(10000)
+                    closest_light_wp=min(waypoint_difference) + car_position
 
-                light_idx = light_pos_wp.index(light_num_wp)
+                #With the basis of aboves determined light wp now find the actual light
+                light_idx = light_pos_waypoints.index(closest_light_wp)
                 light = light_positions[light_idx]
-
-                #rospy.loginfo('[TLNode_Real] Light identified to be nearest to car: '+ str(light_idx) + ' at position ' + str(light))
-                #rospy.loginfo('[TLNode_Real] Belongs to waypoint: '+ str        (light_num_wp) + ' at position ' + str(self.waypoints.waypoints[light_num_wp].pose.pose.position))
-                rospy.loginfo('[TLNode_Real] Car is at waypoint: '+ str(car_position) + ' at waypoint position ' + str(wp.waypoints[car_position].pose.pose.position) + ' at car position ' + str(self.pose.pose.position))
                 
-                # FIX: distance_light does not seem to be defined.
-                #light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+                #This wholes block purpose is to determine if we should even bother invoking the classifier. If its far out then I won't do so. For the bagfiles I needed to alter the logic a bit cause unluckily the loop is done so it the car switches from waypoint 60 to zero just in front of the light so the distance function is a bit more complicated.
                 light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
                 
                 target_light_too_far = 1
@@ -388,23 +365,18 @@ class TLDetector(object):
                     if light_distance <=self.IGNORE_FAR_LIGHT_SIMULATOR_DATA_COLLECTION:
                         target_light_too_far = 0
                 if(self.realimages_classifier_mode==1):
-                    rospy.loginfo('[TLNode_Real] Waypoint difference: '+ str(light_num_wp - car_position))
-                    rospy.loginfo('[TLNode_Real] Waypoint logic state: '+ str(light_distance <=self.IGNORE_FAR_LIGHT_REAL and (light_num_wp - car_position)>=-15 and (light_num_wp - car_position)<=-6))
-                    if light_distance <=self.IGNORE_FAR_LIGHT_REAL and (((light_num_wp - car_position)>=-15 and (light_num_wp - car_position)<=-9) or ((light_num_wp - car_position)>30)):
+                    if light_distance <=self.IGNORE_FAR_LIGHT_REAL and (((closest_light_wp - car_position)>=-15 and (closest_light_wp - car_position)<=-9) or ((closest_light_wp - car_position)>30)):
                         target_light_too_far = 0
-                        rospy.loginfo('[TLNode_Real] Classification to be invoked: ')
-
-
-                rospy.loginfo('[TLNode_Real] Distance to light: '+ str(light_distance))
         
-        #Fix changed handling of simulator. Not being done in this function anymore
+        #Either call the classifier or don't bother as the closest light is still far out
         if light:
             if  target_light_too_far == 1:
                 return -1, TrafficLight.UNKNOWN
             else:
                 rospy.loginfo('[TLNode_Real] Invoke classification')
                 state = self.get_light_state(light)
-                return light_num_wp, state
+                rospy.loginfo('[TLNode_Real] Classification returned: ' + str(state))
+                return closest_light_wp, state
             
         self.waypoints = None
         return -1, TrafficLight.UNKNOWN
@@ -426,8 +398,6 @@ class TLDetector(object):
         light_positions = []
         for i in range(len(self.lights)):
             light_positions.append(self.lights[i].pose.pose.position)
-
-        #rospy.loginfo('[TLNode_Simu] Last light position as given by topic' + str(light_positions[len(light_positions)-1]))
         
         #Find where the vehicle is and safe it in car position
         if self.pose:
@@ -435,75 +405,66 @@ class TLDetector(object):
             if car_position is not None:
                 self.last_car_position = car_position
 
-        rospy.loginfo('[TLNode_Simu] Current car ' + str(self.last_car_position))
-
-        # Attribute the light positions to waypoints
-        light_pos_wp = []
+        # Attribute the light positions to waypoints to use this in later steps
+        light_pos_waypoints = []
         if self.waypoints is not None:
-            wp = self.waypoints
+            temp_waypoints = self.waypoints
             for i in range(len(light_positions)):
-                # FIX: See note in get_closest_waypoint_light. l_pos can't be a list!
-                # cxe: I just changed distance function to handle both. Maybe a bad idea.
-                # AJankl: Put it back to the state from my implmentation lpos is not a list cause it says light_positions[i] so its only one element of the array
-                l_pos = self.get_closest_waypoint_light(wp, light_positions[i])
-                
-                #if(i==(len(light_positions)-1)):
-                        #rospy.loginfo('[TLNode_Simu] Light: '+ str(i) + ' at position ' + str(light_positions[i]))
-                        #rospy.loginfo('[TLNode_Simu] Belongs to waypoint: '+ str(l_pos) + ' at position ' + str(wp.waypoints[l_pos].pose.pose.position))
 
-                light_pos_wp.append(l_pos)
-            self.last_light_pos_wp = light_pos_wp
+                l_pos = self.get_closest_waypoint_light(temp_waypoints, light_positions[i])
+                
+                light_pos_waypoints.append(l_pos)
+            self.light_pos_waypoints = light_pos_waypoints
         else:
-            light_pos_wp = self.last_light_pos_wp
+            light_pos_waypoints = self.light_pos_waypoints
 
         # Get the id of the next light
-        if len(light_pos_wp) is not 0:
+        if len(light_pos_waypoints) is not 0:
             # This branch gets taken in case the vehicle is almost through the loop. After the last light.
             # Then the next light can only be the one that comes first in the loop.
-            if self.last_car_position > max(light_pos_wp):
-                light_num_wp = min(light_pos_wp)
+            if self.last_car_position > max(light_pos_waypoints):
+                closest_light_wp = min(light_pos_waypoints)
+            #This branch gets taken to determine the closest car when its unclear which it is. It calculates the difference between the waypoint of the light and the car and takes the one that is closest to the car but it can't be behind the car then it gets an arbitrary high value in in waypoint difference so it won't get taken
             else:
-                light_delta = light_pos_wp[:]
-                light_delta[:] = [x - self.last_car_position for x in light_delta]
-                light_num_wp = min(i for i in light_delta if i >= 0) + self.last_car_position
+                waypoint_difference = []
+                for i in range(len(light_pos_waypoints)):
+	            difference = light_pos_waypoints[i]-car_position
+                    if(difference >=0):
+                        waypoint_difference.append(difference)
+                    else:
+                        waypoint_difference.append(10000)
+                closest_light_wp=min(waypoint_difference) + car_position
 
-            light_idx = light_pos_wp.index(light_num_wp)
+            light_idx = light_pos_waypoints.index(closest_light_wp)
             light = light_positions[light_idx]
 
-            #rospy.loginfo('[TLNode_Simu] Light identified to be nearest to car: '+ str(light_idx) + ' at position ' + str(light))
-            #rospy.loginfo('[TLNode_Simu] Belongs to waypoint: '+ str(light_num_wp) + ' at position ' + str(self.waypoints.waypoints[light_num_wp].pose.pose.position))
-            #rospy.loginfo('[TLNode_Simu] Car is at waypoint: '+ str(car_position) + ' at position ' + str(wp.waypoints[car_position].pose.pose.position))
-        
-            # FIX: distance_light does not seem to be defined.
-            #light_distance = self.distance_light(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
             light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
 
-            #rospy.loginfo('[TLNode_Simu] Distance to light: '+ str(light_distance))
         
-        #Fix changed handling of simulator. Not being done in this function anymore
+        #Either evaluate the light status from vehicle/traffic_lights or don't bother as the closest light is still far out. IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR was only introduced cause the green light phase is sometimes slow
         if light:
             if light_distance >= self.IGNORE_FAR_LIGHT_SIMULATOR or light_distance <=self.IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR:
                 return -1, TrafficLight.UNKNOWN
             else:
+                rospy.loginfo('[TLNode_Real] Invoke evaluating traffic lights topic')
                 state = self.lights[light_idx].state
-                #rospy.loginfo('[TLNode_Simu] Light is in state: '+ str(state))
-                #rospy.loginfo('[TLNode_Simu] Return values therefore: '+ str(light_num_wp)+ ' , '+str(state))
-                if (self.last_car_position<=light_num_wp-25):
-                    return light_num_wp-25, state
+                rospy.loginfo('[TLNode_Simu] traffic lights topic returned: ' + str(state))
+                #Since the traffic lights topic publishes the stopline I always give back a "invented" stopline 25 waypoints behind the traffic light
+                if (self.last_car_position<=closest_light_wp-25):
+                    return closest_light_wp-25, state
                 else:
                     return -1, TrafficLight.UNKNOWN
             
         self.waypoints = None
         return -1, TrafficLight.UNKNOWN
         
-    def get_closest_waypoint_light(self, wp, l_pos):
+    #Same as get closest waypoint with the difference that it does not safe the last waypoint to a permanent variable as this is only for the car pos not for the lights
+    def get_closest_waypoint_light(self, given_waypoints, light_position):
         best_waypoint = None
-        waypoints = wp.waypoints
-        # l_pos should not be a list. 
-        # The second arg, waypoints[0].pose.pose.position is type: geometry_msgs.msg._Point.Point
-        min_dist = self.distance(l_pos, waypoints[0].pose.pose.position)
-        for i, point in enumerate(waypoints):
-            dist = self.distance(l_pos, point.pose.pose.position)
+        waypoints = given_waypoints.waypoints
+        min_dist = self.distance(light_position, waypoints[0].pose.pose.position)
+        for i in range(len(waypoints)):
+            dist = self.distance(light_position, waypoints[i].pose.pose.position)
             if dist < min_dist:
                 best_waypoint = i
                 min_dist = dist
