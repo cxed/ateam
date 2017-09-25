@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, TwistStamped
 from styx_msgs.msg import Lane, Waypoint, TrafficLightArray
 from std_msgs.msg import Int32
 import tf
@@ -34,6 +34,7 @@ class WaypointUpdater(object):
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
+        rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
         rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_waypoint_cb)
@@ -47,6 +48,7 @@ class WaypointUpdater(object):
         self.last_waypoint_index = None
         # Waypoint index of a upcoming redlight, -1 if it does not exist
         self.traffic_stop_waypoint_index = -1
+        self.current_velocity = None
 
         # get max speed from config
         self.max_speed = rospy.get_param('~max_speed_mph', 10) * MPH_TO_MPS
@@ -76,7 +78,7 @@ class WaypointUpdater(object):
             lane.header.stamp = rospy.Time(0)
 
             if (self.traffic_stop_waypoint_index != -1 
-                and (self.traffic_stop_waypoint_index - self.next_waypoint_index) < 15):
+                and self.is_in_braking_distance()):
                 
                 # we have decided that the waypoint published by the /traffic_waypoint 
                 # is where we need to stop the car at
@@ -125,6 +127,15 @@ class WaypointUpdater(object):
 
             self.final_waypoints_pub.publish(lane)
 
+    def is_in_braking_distance(self):
+        if self.current_velocity:
+            p1 = self.current_waypoints[self.traffic_stop_waypoint_index].pose.pose.position
+            p2 = self.current_waypoints[self.next_waypoint_index].pose.pose.position
+            distance = self.calc_position_distance(p1, p2) - 2
+            time = distance / self.current_velocity
+            if distance < 1 or self.current_velocity / time >= 4:
+                return True
+        return False
 
     def calculate_distance(self, waypoint):
         # calculates the euclidian distance between the vehicle (global) and the waypoint (global)
@@ -238,6 +249,9 @@ class WaypointUpdater(object):
                 vel = 0.
             wp.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
         return waypoints
+
+    def current_velocity_cb(self, msg):
+        self.current_velocity = msg.twist.linear.x
 
     def traffic_waypoint_cb(self, msg):
         if self.traffic_stop_waypoint_index != msg.data:
