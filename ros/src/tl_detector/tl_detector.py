@@ -416,7 +416,7 @@ class TLDetector(object):
                 light_pos_waypoints.append(l_pos)
             self.light_pos_waypoints = light_pos_waypoints
         else:
-            light_pos_waypoints = self.light_pos_waypoints
+            light_pos_waypoints = self.last_light_pos_waypoints
 
         # Get the id of the next light
         if len(light_pos_waypoints) is not 0:
