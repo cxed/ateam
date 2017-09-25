@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-from styx_msgs.msg import TrafficLight
+from styx_msgs.msg import TrafficLight, TrafficLightArray
+from std_msgs.msg import Int32
 import tensorflow as tf
 import numpy as np
 import cv2, rospkg, rospy, time
@@ -10,7 +11,7 @@ class TLClassifier(object):
         #TODO DONE load classifier
         self.debug = False
         self.capture_images = False
-        self.verbose = False
+        self.verbose = True
 
         rospack = rospkg.RosPack()
         self.imgPath = str(rospack.get_path('tl_detector'))+'/light_classification/pics/'
@@ -23,8 +24,16 @@ class TLClassifier(object):
         saver = tf.train.Saver()
         self.sess = tf.Session()        
         saver.restore(self.sess, tf.train.latest_checkpoint(modelCheckpointFile))
+
+        self.waypoint = None
+        self.traffic_waypoint_sub = rospy.Subscriber('/traffic_waypoint', Int32, self.get_traffic_waypoint)
+
         if self.debug:
             rospy.loginfo('[TL Classifier] constructor completed: ')
+
+    def __del__(self):
+        base_waypoints_sub.unregister()
+        
 
     def LeNet(self, x):    
         # Hyperparameters
@@ -143,9 +152,13 @@ class TLClassifier(object):
 
         if self.verbose:
             strings = {0: "GREEN", 1: "YELLOW", 2: "RED"}
-            classification_result = strings.get(classification, TrafficLight.UNKNOWN)
-	    given = rospy.Publisher('/traffic_waypoint', Int32, queue_size=0)
-	    should_be = strings.get(given, TrafficLight.UNKNOWN)
-	    rospy.loginfo('[TL Classifier] ' + str(classification_result) + ' detected with certainty: ' + str(certainty) + ' Expected: ' + str(should_be) )
+            classification_result = strings.get(classification, "UNKNOWN")
+            wp = "None Published"
+            if self.waypoint != None:
+                wp = str(self.waypoint)
+            rospy.loginfo('[TL Classifier] ' + classification_result + ' detected with certainty: ' + str(certainty) + ' Waypoint: ' + wp)
 
         return  result
+
+    def get_traffic_waypoint(self, msg):
+        self.waypoint = msg.data
