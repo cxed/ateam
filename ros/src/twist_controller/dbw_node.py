@@ -153,6 +153,7 @@ class DBWNode(object):
         # reset the controller if dbw is switched off
         if self.dbw_enabled == True and msg.data == False:
             self.controller.reset()
+            self.steering_controller.reset()
 
         # extract the boolean status of the dbw from the msg
         self.dbw_enabled = msg.data
@@ -183,7 +184,6 @@ class DBWNode(object):
 
     def final_waypoints_cb(self, msg):
         self.final_waypoints = msg.waypoints
-
 
     def polyeval(self, coeffs, x):
         """ evaluate a polynomial
