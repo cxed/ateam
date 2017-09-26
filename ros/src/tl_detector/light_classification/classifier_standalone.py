@@ -9,6 +9,7 @@ class TLClassifierStandalone:
         #TODO DONE load classifier
         self.debug = False
         self.capture_images = False
+        self.verbose = True
         
         self.x = tf.placeholder(tf.float32, (1, 150, 100, 3))
         self.y = tf.placeholder(tf.int32, (None))
@@ -19,15 +20,70 @@ class TLClassifierStandalone:
         if self.debug:
             print('[TL Classifier] constructor completed: ')
 
-    def LeNet(self, x):    
+    def __del__(self):
+        #TODO DONE load classifier
+        self.sess.close()
+
+    def CanonicalLeNet(self, x):    
+        # Hyperparameters
+        mu = 0
+        sigma = 0.1
+    
+        # Layer 1: Convolutional. Input = 32x32x3. Output = 28x28x6.
+        conv1_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 3, 3), mean = mu, stddev = sigma))
+        conv1_b = tf.Variable(tf.zeros(3))
+        conv1   = tf.nn.conv2d(x, conv1_W, strides=[1, 1, 1, 1], padding='VALID') + conv1_b
+
+        # Activation.
+        conv1 = tf.nn.relu(conv1)
+
+        # Pooling. Input = 28x28x6. Output = 14x14x6.
+        conv1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
+
+        # Layer 2: Convolutional. Output = 10x10x16.
+        conv2_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 3, 5), mean = mu, stddev = sigma))
+        conv2_b = tf.Variable(tf.zeros(5))
+        conv2   = tf.nn.conv2d(conv1, conv2_W, strides=[1, 1, 1, 1], padding='VALID') + conv2_b
+    
+        # Activation.
+        conv2 = tf.nn.relu(conv2)
+
+        # Pooling. Input = 10x10x16. Output = 5x5x16.
+        conv2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
+
+        # Flatten. Input = 5x5x16. Output = 400.
+        fc0   = flatten(conv2)
+    
+        # Layer 3: Fully Connected. Input = 400. Output = 200.
+        fc1_W = tf.Variable(tf.truncated_normal(shape=(3740, 50), mean = mu, stddev = sigma))
+        fc1_b = tf.Variable(tf.zeros(50))
+        fc1   = tf.matmul(fc0, fc1_W) + fc1_b
+    
+        # Activation.
+        fc1    = tf.nn.relu(fc1)
+
+        # Layer 4: Fully Connected. Input = 200. Output = 150.
+        fc2_W  = tf.Variable(tf.truncated_normal(shape=(50, 25), mean = mu, stddev = sigma))
+        fc2_b  = tf.Variable(tf.zeros(25))
+        fc2    = tf.matmul(fc1, fc2_W) + fc2_b
+    
+        # Activation.
+        fc2    = tf.nn.relu(fc2)
+
+        # Layer 5: Fully Connected. Input = 150. Output = 10.
+        fc3_W  = tf.Variable(tf.truncated_normal(shape=(25, 3), mean = mu, stddev = sigma))
+        fc3_b  = tf.Variable(tf.zeros(3))
+        logits = tf.matmul(fc2, fc3_W) + fc3_b
+
+        return logits
+               
+    def LeNet(self, x):  
+ 
         # Hyperparameters
         mu = 0
         sigma = 0.01
         Padding='VALID'
         W_lambda = 3.0
-
-        if self.debug:
-                print('[TL Classifier] input shape: ', x.shape)
     
         conv1_W = tf.Variable(tf.truncated_normal(shape=(60, 40, 3, 8), mean = mu, stddev = sigma))
         conv1_b = tf.Variable(tf.zeros(8))
@@ -119,7 +175,7 @@ class TLClassifierStandalone:
             print("fc3_W shape: ", fc3_W.shape)
             print("fc3_b shape: ", fc3_b.shape)
             print("logits shape: ", logits.shape)
-
+    
         return logits
 
     def get_classification(self, image):
@@ -135,7 +191,6 @@ class TLClassifierStandalone:
         #TODO implement light color prediction
 
         if self.capture_images:
-            path = '/home/max/Pictures/'
             cv2.imwrite(self.imgPath+str(int(time.clock()*1000))+'.jpg', image)
             print('[TLClassifier] Saved Image ... ')
 
@@ -149,6 +204,15 @@ class TLClassifierStandalone:
         assert image.shape == (300, 200, 3)
         if self.debug:
             print('[TL Classifier] assertion ok: ')
+        
+        a = np.max(image)
+        b = np.min(image)
+        ra = 0.9
+        rb = 0.1
+        try: 
+            image = (((ra-rb) * (image - a)) / (b - a)) + rb
+        except:
+            print('catched..')
 
         res = None
         res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
@@ -159,7 +223,6 @@ class TLClassifierStandalone:
 
         prediction = self.sess.run(self.logits, feed_dict={self.x: image})
     
-
         # get certainty of classification
         probability=tf.nn.softmax(self.logits)
         certainties = self.sess.run([probability], feed_dict={self.x: image})
@@ -169,13 +232,13 @@ class TLClassifierStandalone:
         certainty = certainties[0][0][classification]
 
         # in case the classifier is unsure, return unknown
-        if certainty < 0.6:
+        if certainty < 0.4:
             classification = 4
 
-        choices = {0: "GREEN", 1: "YELLOW", 2: "RED"}
+        choices = {0: "GREEN", 1: "YELLOW", 2: "RED", 3: "UNKNOWN"}
         result = choices.get(classification, "UNKNOWN")
 
-        if self.debug:
-            print('[TL Classifier] ' + str(result) + ' detected')
+        if self.verbose:
+            print('[TL Classifier] ' + result + ' ('  +  str(classification) + ') ' + ' detected with ' + str(certainty) + ' certainty')
 
         return  result
