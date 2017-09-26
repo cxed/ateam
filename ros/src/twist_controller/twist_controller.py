@@ -38,12 +38,17 @@ class Controller(object):
         # create a yaw controller
         self.yaw_controller = YawController(self.wheel_base, self.steer_ratio, self.min_speed, self.max_lat_accel, self.max_steer_angle)
 
+        self.timestamp = rospy.get_time()
+
     def reset(self):
         self.linear_velocity_PID.reset()
         self.angular_velocity_PID.reset()
         
 
     def control(self, current_linear_velocity, current_angular_velocity, target_linear_velocity,  target_angular_velocity):
+
+        delta_time = rospy.get_time() - self.timestamp
+        self.timestamp = rospy.get_time()
 
         # presummably the mass is dependent on remaining fuel
         # so in the control step, update the mass based on the available fuel
@@ -54,7 +59,7 @@ class Controller(object):
         velocity_error = target_linear_velocity - current_linear_velocity
 
         # pass the error to the PID controller, with a sample time of 1 / refresh_rate
-        throttle_cmd = self.linear_velocity_PID.step(velocity_error, 1.0 / self.refresh_rate)
+        throttle_cmd = self.linear_velocity_PID.step(velocity_error, delta_time)
 
         # then limit the acceleration
         # TODO can also put this into a PID for smoother acceleration
