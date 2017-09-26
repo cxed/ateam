@@ -38,7 +38,7 @@ class Controller(object):
         # create a yaw controller
         self.yaw_controller = YawController(self.wheel_base, self.steer_ratio, self.min_speed, self.max_lat_accel, self.max_steer_angle)
 
-        self.timestamp = rospy.get_time()
+        self.timestamp = None
 
     def reset(self):
         self.linear_velocity_PID.reset()
@@ -46,6 +46,10 @@ class Controller(object):
         
 
     def control(self, current_linear_velocity, current_angular_velocity, target_linear_velocity,  target_angular_velocity):
+
+        if self.timestamp == None:
+            self.timestamp = rospy.get_time()
+            return 0.0, 0.0, 0.0
 
         delta_time = rospy.get_time() - self.timestamp
         self.timestamp = rospy.get_time()
