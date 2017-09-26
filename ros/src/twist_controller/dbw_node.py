@@ -3,10 +3,13 @@
 import rospy
 from std_msgs.msg import Bool
 from dbw_mkz_msgs.msg import ThrottleCmd, SteeringCmd, BrakeCmd, SteeringReport
-from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import PoseStamped, TwistStamped
+from styx_msgs.msg import Lane
 import math
-
+import tf
+import numpy as np
 from twist_controller import Controller
+from pid import PID
 
 '''
 You can build this node only after you have built (or partially built) the `waypoint_updater` node.
@@ -30,6 +33,8 @@ Once you have the proposed throttle, brake, and steer values, publish it on the 
 that we have created in the `__init__` function.
 
 '''
+
+MAX_STEERING = 0.43 # 25 degrees in radians
 
 class DBWNode(object):
     def __init__(self):
@@ -74,12 +79,32 @@ class DBWNode(object):
         # Subscribe to /vehicle/dbw_enabled to obtain the dbw status
         rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.extract_dbw_status)
 
+        # Subscribe to /current_pose to get current position
+        rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
+
+        # Subscribe to /final_waypoints to get final waypoints
+        rospy.Subscriber('/final_waypoints', Lane, self.final_waypoints_cb)
+
+        # car's current pose
+        self.current_pose = None
+
+        # waypoints from final_waypoints topic
+        self.final_waypoints = None
+
+        self.timestamp = rospy.get_time()
+        self.steering_controller = PID(0.16, 0.01, 0.8, mn=-MAX_STEERING, mx=MAX_STEERING)
+
         self.loop()
 
     def loop(self):
         '''Main publishing of car controls if car should be controlled.'''
         rate = rospy.Rate(self.refresh_rate)
         while not rospy.is_shutdown():
+
+            # calculate delta time since last loop
+            delta_time = rospy.get_time() - self.timestamp
+            self.timestamp = rospy.get_time()
+
             # preliminary attempt to get car moving
             # block multiple calls if the velocity has already been set
             #if self.current_linear_velocity is None or self.target_linear_velocity is None:
@@ -88,10 +113,20 @@ class DBWNode(object):
                 or self.target_linear_velocity is None):
                 continue
 
-            throttle,brake,steer = self.controller.control(self.current_linear_velocity,
+            throttle,brake,p_steer = self.controller.control(self.current_linear_velocity,
                                                            self.current_angular_velocity,
                                                            self.target_linear_velocity,
                                                            self.target_angular_velocity)
+
+            # calculate cte
+            cte = self.get_cte()
+
+            # feed cte into pid to get steering
+            c_steer = self.steering_controller.step(cte, delta_time)
+            steer = c_steer
+
+            # TODO: look into using both steering from cte and yaw_controller
+
             self.publish(throttle, brake, steer)
             
             rate.sleep()
@@ -141,6 +176,52 @@ class DBWNode(object):
             bcmd.pedal_cmd_type = BrakeCmd.CMD_TORQUE
             bcmd.pedal_cmd = brake
             self.brake_pub.publish(bcmd)
+
+    def pose_cb(self, msg):
+        self.current_pose = msg.pose
+
+    def final_waypoints_cb(self, msg):
+        self.final_waypoints = msg.waypoints
+
+
+    def polyeval(self, coeffs, x):
+        """ evaluate a polynomial
+        """
+        result = 0.0
+        for i in range(len(coeffs)):
+            result += coeffs[i] * pow(x, i)
+        return result
+
+    def get_cte(self):
+        if self.current_pose != None and self.final_waypoints != None:
+            # get yaw
+            orientation = self.current_pose.orientation
+            quaternion = [orientation.x, orientation.y, orientation.z, orientation.w]
+            _, _, yaw = tf.transformations.euler_from_quaternion(quaternion)
+
+            # car's current x and y
+            px = self.current_pose.position.x
+            py = self.current_pose.position.y
+
+            # convert final way points to car's reference point of view
+            ptsx_car = []
+            ptsy_car = []
+            for wp in self.final_waypoints:
+                shift_x = wp.pose.pose.position.x - px
+                shift_y = wp.pose.pose.position.y - py
+                ptsx_car.append(shift_x * math.cos(-yaw) - shift_y * math.sin(-yaw))
+                ptsy_car.append(shift_x * math.sin(-yaw) + shift_y * math.cos(-yaw))
+
+            # np.polyfit returns coefficients, highest power first, so we need to reverse it
+            coeffs = np.polyfit(ptsx_car, ptsy_car, 3)
+            coeffs = list(reversed(coeffs))
+
+            cte = self.polyeval(coeffs, 0)
+            #epsi = -math.atan(coeffs[1])
+            return cte
+
+        return 0
+
 
 
 if __name__ == '__main__':
