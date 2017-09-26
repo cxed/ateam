@@ -237,11 +237,11 @@ class TLDetector(object):
         # Same as simple screen projection given aligned system. !! we do not do any real transformation as rvec and tvec are zeroe
         ret, _ = cv2.projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs)
 
-	#Get the points in world on pixel coordinates
+        #Get the points in world on pixel coordinates
         x = int(ret[0,0,0])
         y = int(ret[0,0,1])
 
-	# check if x,y basically is not on the screen. and if so just return false as something is wrong
+        # check if x,y basically is not on the screen. and if so just return false as something is wrong
         if x>(image_width) or y>(image_height):
             return (False, False) 
         else:
@@ -264,7 +264,8 @@ class TLDetector(object):
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
 
-        #Invoke projection only for the simulator where this works reasonably well for the bagfiles just take the middle of the image and crop around that
+        # Invoke projection only for the simulator where this works reasonably well for the
+        # bagfiles just take the middle of the image and crop around that
         if (self.simulator_classifier_mode==1):
             x, y = self.project_to_image_plane(light)
         if (self.realimages_classifier_mode==1):
@@ -274,31 +275,32 @@ class TLDetector(object):
         if ((x is False) or (y is False)): # if not (x and y)?
             return TrafficLight.UNKNOWN
         else:
-            # Cropped around the traffic light for the classifier from Markus which would need to ingest bgr8 images that are of size 300x200 (Can be changed if needed)
-	    # Crops are different for bagfiles and simulator as the image size is different
-	    cv_cropped_image = cv_image.copy()
-	    if (self.simulator_classifier_mode==1):
-        	cv_cropped_image = cv_image[(y-225):(y+225),(x-150):(x+150)]
-	    	cv_cropped_image = cv2.resize(cv_cropped_image,(200,300),interpolation = cv2.INTER_CUBIC)
-	    if (self.realimages_classifier_mode==1):
-        	cv_cropped_image = cv_image[(y-375):(y+375),(x-250):(x+250)]
-	    	cv_cropped_image = cv2.resize(cv_cropped_image,(200,300),interpolation = cv2.INTER_CUBIC)
+            # Cropped around the traffic light for the classifier from Markus which would need
+            # to ingest bgr8 images that are of size 300x200 (Can be changed if needed)
+            # Crops are different for bagfiles and simulator as the image size is different
+            cv_cropped_image = cv_image.copy()
+            if (self.simulator_classifier_mode==1):
+                cv_cropped_image = cv_image[(y-225):(y+225),(x-150):(x+150)]
+                cv_cropped_image = cv2.resize(cv_cropped_image,(200,300),interpolation = cv2.INTER_CUBIC)
+            if (self.realimages_classifier_mode==1):
+                cv_cropped_image = cv_image[(y-375):(y+375),(x-250):(x+250)]
+                cv_cropped_image = cv2.resize(cv_cropped_image,(200,300),interpolation = cv2.INTER_CUBIC)
 
             #This gets only taken if one wants to save images for the classifier training. Not being used in end system
-	    if(self.save_images_simulator==1):
-            	self.time=time.clock()
-		path = '/home/student/Pictures/simulated/'
-            	cv2.imwrite(path+str(int(self.time*1000))+'.jpg',cv_cropped_image)
-	    	rospy.loginfo('[TLNode_Real] Saved Image from simulator ')
+            if(self.save_images_simulator==1):
+                    self.time=time.clock()
+                    path = '/home/student/Pictures/simulated/'
+                    cv2.imwrite(path+str(int(self.time*1000))+'.jpg',cv_cropped_image)
+                    rospy.loginfo('[TLNode_Real] Saved Image from simulator ')
 
-	    if(self.save_images_real==1):
-            	self.time=time.clock()
-		path = '/home/student/Pictures/bagfiles/'
-            	cv2.imwrite(path+str(int(self.time*1000))+'.jpg',cv_cropped_image)
-	    	rospy.loginfo('[TLNode_Real] Saved Image from bagfile ')
-	    
-	    # A publisher to show the cropped images.
-	    self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
+            if(self.save_images_real==1):
+                    self.time=time.clock()
+                    path = '/home/student/Pictures/bagfiles/'
+                    cv2.imwrite(path+str(int(self.time*1000))+'.jpg',cv_cropped_image)
+                    rospy.loginfo('[TLNode_Real] Saved Image from bagfile ')
+            
+            # A publisher to show the cropped images.
+            self.cropped_pub.publish(self.bridge.cv2_to_imgmsg(cv_cropped_image, "bgr8"))
             
         #Get classification
         #TODO Markus Meyerhofer. Please change in case classifier is up and running
@@ -338,7 +340,7 @@ class TLDetector(object):
             
         # Get the id of the next light
         if len(light_pos_waypoints) is not 0:
-	        # This branch gets taken in case the vehicle is almost through the loop. After the last light.
+                # This branch gets taken in case the vehicle is almost through the loop. After the last light.
                 # Then the next light can only be the one that comes first in the loop.
                 if self.last_car_position > max(light_pos_waypoints):
                      closest_light_wp = min(light_pos_waypoints)
@@ -346,7 +348,7 @@ class TLDetector(object):
                 else:
                     waypoint_difference = []
                     for i in range(len(light_pos_waypoints)):
-			difference = light_pos_waypoints[i]-car_position
+                        difference = light_pos_waypoints[i]-car_position
                         if(difference >=0):
                             waypoint_difference.append(difference)
                         else:
@@ -428,7 +430,7 @@ class TLDetector(object):
             else:
                 waypoint_difference = []
                 for i in range(len(light_pos_waypoints)):
-	            difference = light_pos_waypoints[i]-car_position
+                    difference = light_pos_waypoints[i]-car_position
                     if(difference >=0):
                         waypoint_difference.append(difference)
                     else:
@@ -446,7 +448,8 @@ class TLDetector(object):
             if light_distance >= self.IGNORE_FAR_LIGHT_SIMULATOR or light_distance <=self.IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR:
                 return -1, TrafficLight.UNKNOWN
             else:
-                rospy.loginfo('[TLNode_Real] Invoke evaluating traffic lights topic')
+                # cxed- Enable if needed. Trying to clean up log output.
+                #rospy.loginfo('[TLNode_Real] Invoke evaluating traffic lights topic')
                 state = self.lights[light_idx].state
                 rospy.loginfo('[TLNode_Simu] traffic lights topic returned: ' + str(state))
                 #Since the traffic lights topic publishes the stopline I always give back a "invented" stopline 25 waypoints behind the traffic light
