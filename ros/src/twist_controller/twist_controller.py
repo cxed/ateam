@@ -71,11 +71,12 @@ class Controller(object):
 
         steer = self.yaw_controller.get_steering(target_linear_velocity, target_angular_velocity, current_linear_velocity)
 
+
         # TODO implement braking
         brake = 0
         # simple braking just so we can get the car to stop at the light
         if velocity_error < 0:
             throttle = 0
-            brake = min(acceleration, self.decel_limit) * self.vehicle_mass * self.wheel_radius * -1
+            brake = min(acceleration, self.decel_limit) * vehicle_mass * self.wheel_radius * -1
 
         return throttle, brake, steer
