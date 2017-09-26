@@ -227,7 +227,7 @@ class WaypointUpdater(object):
                 self.next_waypoint_index)
 
     def log_waypoint_progress(self):
-        if self.next_waypoint_index != self.last_waypoint_index:
+        if self.next_waypoint_index != self.last_waypoint_index and not self.next_waypoint_index%10:
             rospy.loginfo('moving to waypoint %s', self.next_waypoint_index)
 
     def waypoints_cb(self, waypoints):
