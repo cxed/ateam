@@ -1,6 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-    <node pkg="waypoint_updater" type="waypoint_updater.py" output="screen" name="waypoint_updater">
-        <param name="max_speed_mph" value="10" />
-    </node>
-</launch>

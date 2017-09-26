@@ -13,14 +13,14 @@ class TLClassifier_Trainer:
         self.green_images = []
         self.yellow_images = []
         self.red_images = []
-        self.X_train = np.ndarray(shape=(0, 150, 100, 3))
-        self.Y_train = np.ndarray(shape=(0))
-        dir = './combined_pics'
+        self.X_data = np.ndarray(shape=(0, 150, 100, 3))
+        self.Y_data = np.ndarray(shape=(0))
+        dir = './sim_pics'
         self.set_image_paths(dir + '/GREEN/', 
                 dir + '/YELLOW/', 
                 dir + '/RED/')
-        self.EPOCHS = 300
-        self.BATCH_SIZE = 2048
+        self.EPOCHS = 50
+        self.BATCH_SIZE = 128
 
     # scale images depending on extension/image type
     def load_image(self, image_path):
@@ -68,18 +68,78 @@ class TLClassifier_Trainer:
                 images.append(image)
                 labels.append(2)
 
-        self.X_train = np.array(images)
+        self.X_data = np.array(images)
+        # Max-Min Normalization: https://www.mathworks.com/matlabcentral/answers/25759-normalizing-data-for-neural-networks
+        a = np.max(self.X_data)
+        b = np.min(self.X_data)
+        ra = 0.9
+        rb = 0.1
+        pa = (((ra-rb) * (self.X_data - a)) / (b - a)) + rb
+
         # zero center
         #self.X_train = (self.X_train - self.X_train.mean())
-        self.Y_train = np.array(labels)
+        self.Y_data = np.array(labels)
+
+    def CanonicalLeNet(self, x):    
+        # Hyperparameters
+        mu = 0
+        sigma = 0.1
+    
+        # Layer 1: Convolutional. Input = 32x32x3. Output = 28x28x6.
+        conv1_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 3, 3), mean = mu, stddev = sigma))
+        conv1_b = tf.Variable(tf.zeros(3))
+        conv1   = tf.nn.conv2d(x, conv1_W, strides=[1, 1, 1, 1], padding='VALID') + conv1_b
+
+        # Activation.
+        conv1 = tf.nn.relu(conv1)
+
+        # Pooling. Input = 28x28x6. Output = 14x14x6.
+        conv1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
+
+        # Layer 2: Convolutional. Output = 10x10x16.
+        conv2_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 3, 5), mean = mu, stddev = sigma))
+        conv2_b = tf.Variable(tf.zeros(5))
+        conv2   = tf.nn.conv2d(conv1, conv2_W, strides=[1, 1, 1, 1], padding='VALID') + conv2_b
+    
+        # Activation.
+        conv2 = tf.nn.relu(conv2)
+
+        # Pooling. Input = 10x10x16. Output = 5x5x16.
+        conv2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
+
+        # Flatten. Input = 5x5x16. Output = 400.
+        fc0   = flatten(conv2)
+    
+        # Layer 3: Fully Connected. Input = 400. Output = 200.
+        fc1_W = tf.Variable(tf.truncated_normal(shape=(3740, 50), mean = mu, stddev = sigma))
+        fc1_b = tf.Variable(tf.zeros(50))
+        fc1   = tf.matmul(fc0, fc1_W) + fc1_b
+    
+        # Activation.
+        fc1    = tf.nn.relu(fc1)
+
+        # Layer 4: Fully Connected. Input = 200. Output = 150.
+        fc2_W  = tf.Variable(tf.truncated_normal(shape=(50, 25), mean = mu, stddev = sigma))
+        fc2_b  = tf.Variable(tf.zeros(25))
+        fc2    = tf.matmul(fc1, fc2_W) + fc2_b
+    
+        # Activation.
+        fc2    = tf.nn.relu(fc2)
+
+        # Layer 5: Fully Connected. Input = 150. Output = 10.
+        fc3_W  = tf.Variable(tf.truncated_normal(shape=(25, 3), mean = mu, stddev = sigma))
+        fc3_b  = tf.Variable(tf.zeros(3))
+        logits = tf.matmul(fc2, fc3_W) + fc3_b
+
+        return logits
                
     def LeNet(self, x):  
  
         # Hyperparameters
         mu = 0
-        sigma = 0.01
+        sigma = 0.1
         Padding='VALID'
-        W_lambda = 3.0
+        W_lambda = 5.0
     
         conv1_W = tf.Variable(tf.truncated_normal(shape=(60, 40, 3, 8), mean = mu, stddev = sigma))
         conv1_b = tf.Variable(tf.zeros(8))
@@ -186,19 +246,18 @@ class TLClassifier_Trainer:
                 total_accuracy += (accuracy * len(batch_x))
             return total_accuracy / num_examples
     
-    
         # split new training set
-        X_train, Y_train = shuffle(self.X_train, self.Y_train)
-        X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=0)
+        X_, Y_ = shuffle(self.X_data, self.Y_data)
+        X_train, X_val, Y_train, Y_val = train_test_split(X_, Y_, test_size=0.2, random_state=1024)
         
         ### Train model
         x = tf.placeholder(tf.float32, (None, 150, 100, 3))
         y = tf.placeholder(tf.int32, (None))
-        one_hot_y = tf.one_hot(self.Y_train, 3)
+        one_hot_y = tf.one_hot(Y_train, 3)
 
         rate = 0.0001
 
-        logits = self.LeNet(tf.cast(self.X_train, tf.float32))
+        logits = self.LeNet(tf.cast(X_train, tf.float32))
 
         cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=one_hot_y)
         loss_operation = tf.reduce_mean(cross_entropy)
@@ -226,8 +285,8 @@ class TLClassifier_Trainer:
                 validation_accuracy = evaluate(X_val, Y_val)
                 if self.show_epochs:
                     print("EPOCH {} ...".format(i+1), "Accuracy = {:.6f}".format(validation_accuracy))
-                if i > self.EPOCHS*2/3:
-                    rate = 0.00001
+                #if i > self.EPOCHS*2/3:
+                    #rate = 0.00001
         
             saver.save(sess, './model')
             print("Model saved")
