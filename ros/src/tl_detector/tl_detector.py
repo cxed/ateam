@@ -63,7 +63,7 @@ class TLDetector(object):
 	self.last_stop_pos_waypoints = []
 
         #Variables that make sure the light is not being considered if its way out
-        self.IGNORE_FAR_LIGHT_REAL = 21.5
+        self.IGNORE_FAR_LIGHT_REAL = 20.5
         self.IGNORE_FAR_LIGHT_SIMULATOR_DATA_COLLECTION = 25.0
         self.IGNORE_FAR_LIGHT_SIMULATOR = 25.0
         self.IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR = 1.0
@@ -72,9 +72,9 @@ class TLDetector(object):
         #simulator_debug_mode = 1 is for using the script with the results from /vehicle/traffic_lights
         #simulator_classifier_mode = is for using the script with the simulator with a classifier working
         #simulator_classifier_mode = is for using the script with the real images from the bagfiles with a classifier working
-        self.simulator_debug_mode = 1
+        self.simulator_debug_mode = 0
         self.simulator_classifier_mode = 0
-        self.realimages_classifier_mode = 0
+        self.realimages_classifier_mode = 1
         self.save_images_simulator = 0
         self.save_images_real = 0
 
