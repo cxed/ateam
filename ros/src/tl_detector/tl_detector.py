@@ -60,11 +60,12 @@ class TLDetector(object):
         self.best_waypoint = 0
         self.last_car_position = 0
         self.last_light_pos_waypoints = []
+	self.last_stop_pos_waypoints = []
 
         #Variables that make sure the light is not being considered if its way out
         self.IGNORE_FAR_LIGHT_REAL = 21.5
         self.IGNORE_FAR_LIGHT_SIMULATOR_DATA_COLLECTION = 25.0
-        self.IGNORE_FAR_LIGHT_SIMULATOR = 50.0
+        self.IGNORE_FAR_LIGHT_SIMULATOR = 25.0
         self.IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR = 1.0
 
         #Variables for configuring this script:
@@ -396,16 +397,30 @@ class TLDetector(object):
 
         #TODO - DONE - find the closest visible traffic light (if one exists)
         
-        #Get the traffic light positions not from the config but from the vehicle/traffic_lights topic
-        light_positions = []
-        for i in range(len(self.lights)):
-            light_positions.append(self.lights[i].pose.pose.position)
-        
         #Find where the vehicle is and safe it in car position
         if self.pose:
             car_position = self.get_closest_waypoint(self.pose.pose)
             if car_position is not None:
                 self.last_car_position = car_position
+
+        #Get the stopline positions
+        stop_positions = self.config['stop_line_positions']
+        
+        #Attribute the stopline positions to waypoints to use this in later steps
+        stop_pos_waypoints = []
+        if self.waypoints is not None:
+            temp_waypoints = self.waypoints
+            for i in range(len(stop_positions)):
+                l_pos = self.get_closest_waypoint_light(temp_waypoints, stop_positions[i])
+                stop_pos_waypoints.append(l_pos)
+            self.last_stop_pos_waypoints = stop_pos_waypoints
+        else:
+            stop_pos_waypoints = self.last_stop_pos_waypoints
+
+        #Get the traffic light positions not from the config but from the vehicle/traffic_lights topic
+        light_positions = []
+        for i in range(len(self.lights)):
+            light_positions.append(self.lights[i].pose.pose.position)
 
         # Attribute the light positions to waypoints to use this in later steps
         light_pos_waypoints = []
@@ -443,14 +458,16 @@ class TLDetector(object):
 
             light_idx = light_pos_waypoints.index(closest_light_wp)
             light = light_positions[light_idx]
+            #also need stopline not just line
+            stoplight = stop_pos_waypoints[light_idx]
 
-            light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
+            #Calculate distance to stopline not light
+            light_distance = self.distance(self.waypoints.waypoints[stoplight].pose.pose.position, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
 
         
         # Either evaluate the light status from vehicle/traffic_lights or don't bother as the closest light is still far out.
-        # IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR was only introduced cause the green light phase is sometimes slow
         if light:
-            if light_distance >= self.IGNORE_FAR_LIGHT_SIMULATOR or light_distance <=self.IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR:
+            if light_distance >= self.IGNORE_FAR_LIGHT_SIMULATOR:
                 return -1, TrafficLight.UNKNOWN
             else:
                 # cxed- Enable if needed. Trying to clean up log output.
@@ -468,10 +485,9 @@ class TLDetector(object):
                     else:
                         rospy.loginfo('[TLNode_Simu] Light change: UNKNOWN '+str(self.state))
 
-                # Since the traffic lights topic publishes the stopline I always give back a "invented"
-                # stopline 25 waypoints behind the traffic light
-                if (self.last_car_position<=closest_light_wp-25):
-                    return closest_light_wp-25, state
+                # Since the traffic lights topic publishes the light instead of the stoplight I needed to have this logic introduced
+                if (self.last_car_position<=stoplight):
+                    return stoplight, state
                 else:
                     return -1, TrafficLight.UNKNOWN
             
