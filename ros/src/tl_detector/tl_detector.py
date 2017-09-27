@@ -426,7 +426,11 @@ class TLDetector(object):
             # Then the next light can only be the one that comes first in the loop.
             if self.last_car_position > max(light_pos_waypoints):
                 closest_light_wp = min(light_pos_waypoints)
-            #This branch gets taken to determine the closest car when its unclear which it is. It calculates the difference between the waypoint of the light and the car and takes the one that is closest to the car but it can't be behind the car then it gets an arbitrary high value in in waypoint difference so it won't get taken
+            # This branch gets taken to determine the closest car when it's
+            # unclear which it is. It calculates the difference between the waypoint of the
+            # light and the car and takes the one that is closest to the car but it can't be
+            # behind the car then it gets an arbitrary high value in in waypoint difference
+            # so it won't get taken
             else:
                 waypoint_difference = []
                 for i in range(len(light_pos_waypoints)):
@@ -443,7 +447,8 @@ class TLDetector(object):
             light_distance = self.distance(light, self.waypoints.waypoints[self.last_car_position].pose.pose.position)
 
         
-        #Either evaluate the light status from vehicle/traffic_lights or don't bother as the closest light is still far out. IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR was only introduced cause the green light phase is sometimes slow
+        # Either evaluate the light status from vehicle/traffic_lights or don't bother as the closest light is still far out.
+        # IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR was only introduced cause the green light phase is sometimes slow
         if light:
             if light_distance >= self.IGNORE_FAR_LIGHT_SIMULATOR or light_distance <=self.IGNORE_LOW_DISTANCE_LIGHT_SIMULATOR:
                 return -1, TrafficLight.UNKNOWN
@@ -451,8 +456,20 @@ class TLDetector(object):
                 # cxed- Enable if needed. Trying to clean up log output.
                 #rospy.loginfo('[TLNode_Real] Invoke evaluating traffic lights topic')
                 state = self.lights[light_idx].state
-                rospy.loginfo('[TLNode_Simu] traffic lights topic returned: ' + str(state))
-                #Since the traffic lights topic publishes the stopline I always give back a "invented" stopline 25 waypoints behind the traffic light
+                #rospy.loginfo('[TLNode_Simu] traffic lights topic returned: ' + str(state))
+                if self.state is not self.last_state: # A new state has been detected. Worth logging.
+                    if self.state == 0:
+                        rospy.loginfo('[TLNode_Simu] Light change: RED')
+                    elif self.state == 1:
+                        rospy.loginfo('[TLNode_Simu] Light change: YELLOW')
+                    elif self.state == 2:
+                        rospy.loginfo('[TLNode_Simu] Light change: GREEN')
+                    # 4 could be "NONE" ? I.e. already beyond any light of concern.
+                    else:
+                        rospy.loginfo('[TLNode_Simu] Light change: UNKNOWN '+str(self.state))
+
+                # Since the traffic lights topic publishes the stopline I always give back a "invented"
+                # stopline 25 waypoints behind the traffic light
                 if (self.last_car_position<=closest_light_wp-25):
                     return closest_light_wp-25, state
                 else:
