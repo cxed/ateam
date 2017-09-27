@@ -42,7 +42,7 @@ class Controller(object):
         self.timestamp = None
 
     def reset(self):
-        self.linear_velocity_PID.reset()
+        self.throttle_control.reset()
         self.angular_velocity_PID.reset()
         
 
