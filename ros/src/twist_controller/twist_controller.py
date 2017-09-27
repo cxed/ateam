@@ -28,9 +28,10 @@ class Controller(object):
         # create a refresh rate of 50 Hz
         #self.refresh_rate = 0.02
 
-        # initialise PID controllers
-        # for velocity, clamp the output to minimum 0 and maximum MAX_SPEED
-        self.linear_velocity_PID = PID(1.0, 0.1, 0.5, mn=0, mx=self.max_speed)
+        # initialise PID controller
+        # self.linear_velocity_PID = PID(1.0, 0.1, 0.5, mn=0, mx=self.max_speed) # replaced with below
+        self.throttle_control = PID(1.0, 0.1, 0.0, mn=0.0, mx=1.0)
+        
 
         # for steering, clamp the output to +- 25 degrees (in radians)
         self.angular_velocity_PID = PID(5.0, 0.1,0.5,mn=-MAX_STEERING, mx=MAX_STEERING)
@@ -60,16 +61,20 @@ class Controller(object):
         vehicle_mass = self.vehicle_mass + self.fuel_capacity * GAS_DENSITY
 
         # calculate a velocity error
-        velocity_error = target_linear_velocity - current_linear_velocity
-
-        # pass the error to the PID controller, with a sample time of 1 / refresh_rate
-        throttle_cmd = self.linear_velocity_PID.step(velocity_error, delta_time)
-
+        # velocity_error = target_linear_velocity - current_linear_velocity # removed and replaced with acceleration
+        
+        # calculate the acceleration required
+        acceleration = max(min((target_linear_velocity - current_linear_velocity), self.accel_limit), self.decel_limit)
+        
+        # calculate the throttle, with limitations set between 0 and 1
+        throttle = self.throttle_control.step(acceleration, delta_time)
+        
+        # removed and replaced with the above
+        # pass the error to the PID controller, with a delta sample time
+        # throttle_cmd = self.linear_velocity_PID.step(velocity_error, delta_time)
         # then limit the acceleration
-        # TODO can also put this into a PID for smoother acceleration
-        # TODO graph the variables to see how they are changing in rqt_graph
-        acceleration = throttle_cmd - current_linear_velocity
-        throttle = min(acceleration, self.accel_limit)
+        # acceleration = throttle_cmd - current_linear_velocity
+        # throttle = min(acceleration, self.accel_limit)
         
         # Obtain the two components for the steering
         #corrective_steer = self.yaw_controller.get_steering(target_linear_velocity, target_angular_velocity, current_linear_velocity)
@@ -80,12 +85,14 @@ class Controller(object):
 
         steer = self.yaw_controller.get_steering(target_linear_velocity, target_angular_velocity, current_linear_velocity)
 
-
-        # TODO implement braking
+        # TODO refine braking
         brake = 0
         # simple braking just so we can get the car to stop at the light
-        if velocity_error < 0:
+        if acceleration < 0:
+            brake = 0
             throttle = 0
-            brake = min(acceleration, self.decel_limit) * vehicle_mass * self.wheel_radius * -1
+            if acceleration < -self.brake_deadband:
+                throttle = 0
+                brake = max(acceleration + self.brake_deadband, self.decel_limit) * vehicle_mass * self.wheel_radius * -1
 
         return throttle, brake, steer
