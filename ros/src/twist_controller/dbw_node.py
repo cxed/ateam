@@ -8,6 +8,7 @@ from styx_msgs.msg import Lane
 import math
 import tf
 import numpy as np
+import warnings
 from twist_controller import Controller
 from pid import PID
 
@@ -212,8 +213,15 @@ class DBWNode(object):
                 ptsx_car.append(shift_x * math.cos(-yaw) - shift_y * math.sin(-yaw))
                 ptsy_car.append(shift_x * math.sin(-yaw) + shift_y * math.cos(-yaw))
 
-            # np.polyfit returns coefficients, highest power first, so we need to reverse it
-            coeffs = np.polyfit(ptsx_car, ptsy_car, 3)
+            # cxed- Need to trap this because it likes to spew warnings. See:
+            # https://stackoverflow.com/questions/21252541/how-to-handle-an-np-rankwarning-in-numpy
+            with warnings.catch_warnings():
+                warnings.filterwarnings('error')
+                try:
+                    # np.polyfit returns coefficients, highest power first, so we need to reverse it
+                    coeffs = np.polyfit(ptsx_car, ptsy_car, 3)
+                except np.RankWarning:
+                    return 0 # NOTE: This may be wrong!!!!
             coeffs = list(reversed(coeffs))
 
             cte = self.polyeval(coeffs, 0)
