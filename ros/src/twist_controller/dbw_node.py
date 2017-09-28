@@ -49,6 +49,7 @@ class DBWNode(object):
         self.dbw_enabled = None
         self.min_speed = 0.0
         self.refresh_rate = 10
+        self.max_steer_angle = rospy.get_param('~max_steer_angle', 8.)
 
         # This is the twist controller object
         self.controller = Controller(
@@ -93,7 +94,7 @@ class DBWNode(object):
         self.final_waypoints = None
 
         self.timestamp = rospy.get_time()
-        self.steering_controller = PID(0.16, 0.01, 0.8, mn=-MAX_STEERING, mx=MAX_STEERING)
+        self.steering_controller = PID(1.0, 0.1, 0.8, mn=-self.max_steer_angle, mx=self.max_steer_angle)
 
         self.loop()
 
