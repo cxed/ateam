@@ -303,11 +303,9 @@ class TLClassifier_Trainer:
                     if type(green_image_path)==type("string"):
                         image = cv2.imread(green_file_path + green_image_path)
                         image = self.normalize_image(image)
-                        import time
-                        cv2.imwrite('/home/max/Pictures/'+str(int(time.clock()*1000))+'.jpg', image)
                         res = None
                         res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-                        image = res.reshape(1, 150, 100, 3)                        
+                        image = res.reshape(1, 150, 100, 3)                       
                         retval = sess.run(logs,feed_dict={x: image})
                         pred = np.argmax(retval[0])
                         result = choices.get(pred, "UNKNOWN")
