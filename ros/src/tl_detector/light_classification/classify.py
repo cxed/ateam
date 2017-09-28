@@ -25,7 +25,7 @@ if eval_green:
             num_images += 1
             if result != 'GREEN':
                 num_incorrect += 1
-            print('GREEN - detected: ', result)
+            print('Expected GREEN - detected: ', result)
 
 if eval_yellow:
     yellow_images=os.listdir(yellow_file_path) 
@@ -36,7 +36,7 @@ if eval_yellow:
             num_images += 1
             if result != 'YELLOW':
                 num_incorrect += 1
-            print('YELLOW - detected: ', result)
+            print('Expected YELLOW - detected: ', result)
 
 if eval_red:
     red_images=os.listdir(red_file_path) 
@@ -45,8 +45,8 @@ if eval_red:
             image = cv2.imread(red_file_path + red_image_path)
             result = classifier.get_classification(image)
             num_images += 1
-            if result != 'YELLOW':
+            if result != 'RED':
                 num_incorrect += 1
-            print('YELLOW - detected: ', result)
+            print('Expected RED - detected: ', result)
 
 print('No Images: ' + str(num_images) + ' incorrect: ' + str(num_incorrect) + ' success rate: ' + str(100.0-100.0*(float(num_incorrect)/float(num_images))) + ' %')

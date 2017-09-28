@@ -21,7 +21,6 @@ class TLClassifierStandalone:
             print('[TL Classifier] constructor completed: ')
 
     def __del__(self):
-        #TODO DONE load classifier
         self.sess.close()
 
     def normalize_image(self, image):
@@ -164,16 +163,15 @@ class TLClassifierStandalone:
         image = self.normalize_image(image)
         res = None
         res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-        image = res.reshape(1, 150, 100, 3)
-
-        assert image.shape == (1, 150, 100, 3)
-        if self.debug:
-            print('[TL Classifier] reshape ok: ')
-
-        
+        image = res.reshape(1, 150, 100, 3)                  
         retval = self.sess.run(self.logits,feed_dict={self.x: image})
         pred = np.argmax(retval[0])
         result = choices.get(pred, "UNKNOWN")
+
+        #retval = self.sess.run(tf.argmax(self.logits, 1),feed_dict={self.x: image})
+        #pred = retval[0]
+        #print('pred: ', str(pred))
+        #result = choices.get(pred, "UNKNOWN")
 
         if self.verbose:
             print('[TL Classifier] ' + result + ' detected.')
