@@ -48,7 +48,7 @@ class DBWNode(object):
         self.target_angular_velocity = None
         self.dbw_enabled = None
         self.min_speed = 0.0
-        self.refresh_rate = 50
+        self.refresh_rate = 10
 
         # This is the twist controller object
         self.controller = Controller(
