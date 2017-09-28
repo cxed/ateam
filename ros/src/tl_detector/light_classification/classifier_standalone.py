@@ -22,8 +22,14 @@ class TLClassifierStandalone:
 
     def __del__(self):
         #TODO DONE load classifier
-        print('Destructor...')
         self.sess.close()
+
+    def normalize_image(self, image):
+        r, g, b = cv2.split(image)
+        r = (r - 128)/128
+        g = (g - 128)/128
+        b = (b - 128)/128
+        return cv2.merge((r, g, b))
 
     def LeNet(self, x):  
  
@@ -153,12 +159,9 @@ class TLClassifierStandalone:
         if self.debug:
             print('[TL Classifier] assertion ok: ')
         
-        a = np.max(image)
-        b = np.min(image)
-        ra = 0.9
-        rb = 0.1 
-        image = (((ra-rb) * (image - a)) / (b - a)) + rb
+        choices = {0: "GREEN", 1: "YELLOW", 2: "RED", 3: "UNKNOWN"}
 
+        image = self.normalize_image(image)
         res = None
         res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
         image = res.reshape(1, 150, 100, 3)
@@ -168,18 +171,9 @@ class TLClassifierStandalone:
             print('[TL Classifier] reshape ok: ')
 
         
-        pred = tf.nn.softmax(self.logits) # softmax: compute probabilities
-        prediction = self.sess.run(pred, feed_dict={self.x: image}) 
-        #print('Prediction: ', str(prediction))
-        classification = np.argmax(prediction)
-        #print('classification: ', str(classification))
-
-        #out_logits = self.sess.run(self.logits, feed_dict={self.x: image})
-        #out_idx = np.argmax(out_logits)
-
-        # in case the classifier is unsure, return unknown
-        choices = {0: "GREEN", 1: "YELLOW", 2: "RED", 3: "UNKNOWN"}
-        result = choices.get(classification, "UNKNOWN")
+        retval = self.sess.run(self.logits,feed_dict={self.x: image})
+        pred = np.argmax(retval[0])
+        result = choices.get(pred, "UNKNOWN")
 
         if self.verbose:
             print('[TL Classifier] ' + result + ' detected.')

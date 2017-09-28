@@ -19,8 +19,8 @@ class TLClassifier_Trainer:
         self.Y_val = np.ndarray(shape=(0))
 
         self.set_image_paths()
-        self.EPOCHS = 10
-        self.BATCH_SIZE = 256
+        self.EPOCHS = 100
+        self.BATCH_SIZE = 2048
 
     # scale images depending on extension/image type
     def load_image(self, image_path):
@@ -41,7 +41,6 @@ class TLClassifier_Trainer:
         return image
 
     def normalize_image(self, image):
-        return image
         r, g, b = cv2.split(image)
         r = (r - 128)/128
         g = (g - 128)/128
@@ -259,8 +258,7 @@ class TLClassifier_Trainer:
         accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
         saver = tf.train.Saver()
 
-        x = tf.placeholder(tf.float32, (None, 150, 100, 3))
-        logs = self.LeNet(tf.cast(x, tf.float32))
+        logits_test = self.LeNet(tf.cast(x, tf.float32))
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
@@ -305,12 +303,12 @@ class TLClassifier_Trainer:
                         image = self.normalize_image(image)
                         res = None
                         res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-                        image = res.reshape(1, 150, 100, 3)                       
-                        retval = sess.run(logs,feed_dict={x: image})
+                        image = res.reshape(1, 150, 100, 3)                  
+                        retval = sess.run(logits_test,feed_dict={x: image})
                         pred = np.argmax(retval[0])
                         result = choices.get(pred, "UNKNOWN")
-                        print('Retval: ', str(retval))
-                        #print('Result: Expected GREEN - Detected: ', result)
+                        #print('Retval: ', str(retval))
+                        print('Result: Expected GREEN - Detected: ', result)
                         num_images += 1
                         if result != 'GREEN':
                             num_incorrect += 1
@@ -323,10 +321,11 @@ class TLClassifier_Trainer:
                         image = self.normalize_image(image)
                         res = None
                         res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-                        image = res.reshape(1, 150, 100, 3)                        
-                        retval = sess.run(logs,feed_dict={x: image})
+                        image = res.reshape(1, 150, 100, 3)                     
+                        retval = sess.run(logits_test,feed_dict={x: image})
                         pred = np.argmax(retval[0])
                         result = choices.get(pred, "UNKNOWN")
+                        #print('Retval: ', str(retval))
                         print('Result: Expected YELLOW - Detected: ', result)
                         num_images += 1
                         if result != 'YELLOW':
@@ -340,10 +339,11 @@ class TLClassifier_Trainer:
                         image = self.normalize_image(image)
                         res = None
                         res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-                        image = res.reshape(1, 150, 100, 3)                        
-                        retval = sess.run(logs,feed_dict={x: image})
+                        image = res.reshape(1, 150, 100, 3)                     
+                        retval = sess.run(logits_test,feed_dict={x: image})
                         pred = np.argmax(retval[0])
                         result = choices.get(pred, "UNKNOWN")
+                        #print('Retval: ', str(retval))
                         print('Result: Expected RED - Detected: ', result)
                         num_images += 1
                         if result != 'RED':
@@ -352,6 +352,9 @@ class TLClassifier_Trainer:
             success_rate = 0.0
             if num_incorrect > 0:
                 success_rate = str(100.0-100.0*(float(num_incorrect)/float(num_images)))
+            if num_incorrect == 0:
+                success_rate = 100
+
             print('No Images: ' + str(num_images) + ' incorrect: ' + str(num_incorrect) + ' success rate: ' + str(success_rate) + ' %')
 
             saver.save(sess, './model')
