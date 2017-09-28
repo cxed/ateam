@@ -27,6 +27,7 @@ LOOKAHEAD_WPS = 50 # Number of waypoints we will publish. You can change this nu
 MPH_TO_MPS = 0.44704 # converions for miles per hour to meters per second
 NARROW_SEARCH_RANGE = 10  # Number of waypoints to search current position back and forth
 MAX_DECEL = 1.0
+REFRESH_RATE = 10
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -56,18 +57,17 @@ class WaypointUpdater(object):
         # added self.target_speed
         self.target_speed = 0
 
-        rospy.spin()
+        self.loop()
+        
+    def loop(self):
+        rate = rospy.Rate(REFRESH_RATE)
+        
+        while not rospy.is_shutdown():
+            rate.sleep()
 
-    def pose_cb(self, msg):
+            if self.current_waypoints is None or self.current_pose is None:
+                continue
 
-        self.current_pose = msg
-
-        # Calculate the yaw by utilising a transform from quaternion to euler
-        orientation = msg.pose.orientation
-        quaternion = [orientation.x, orientation.y, orientation.z, orientation.w]
-        _, _, self.yaw = tf.transformations.euler_from_quaternion(quaternion)
-
-        if (not rospy.is_shutdown() and (self.current_waypoints is not None)):
             next_waypoint_index = self.next_infront_waypoint()
 
             # set the target speed
@@ -79,70 +79,6 @@ class WaypointUpdater(object):
             lane = Lane()
             lane.header.frame_id = self.current_pose.header.frame_id
             lane.header.stamp = rospy.Time(0)
-            
-            '''
-            # Added by Will for testing
-            # TODO will add a braking distance check as well here
-            # TODO can add some wrapping as this may break if acceleration/deceleration takes place over the end of the waypoints
-            if self.traffic_stop_waypoint_index != -1:
-                #and self.is_in_braking_distance():
-                self.target_speed = 0
-
-                # the waypoint is where the car needs to stop
-                stop_waypoint_index = self.traffic_stop_waypoint_index
-
-                # start at the end of the LOOKAHEAD_WPS
-                for i in range(LOOKAHEAD_WPS - 1, 0, -1):
-                    # deal with wrapping
-                    idx = (next_waypoint_index + i) % number_waypoints
-                    wp_new = Waypoint()
-                    wp_extract = self.current_waypoints[idx]
-                    wp_new.pose = wp_extract.pose
-
-                    # if i + next_waypoint_index is greater than the redlight index, set to zero and intentionally dont wrap
-                    if(i + next_waypoint_index >= stop_waypoint_index):
-                        wp_new.twist.twist.linear.x = self.target_speed
-                    # else calculate the distance between the next two waypoints, and assign a speed to that waypoint
-                    else:
-                        closest = next_waypoint_index + i
-                        dist = self.distance(self.current_waypoints, closest, stop_waypoint_index)
-                        self.target_speed = min(math.sqrt(2 * MAX_DECEL * dist), self.max_speed)
-                        wp_new.twist.twist.linear.x = self.target_speed
-                    
-                    lane.waypoints.append(wp_new)
-
-                # waypoints have been added in reverse, so reverse the list
-                lane.waypoints.reverse()
-                self.target_speed = 0
-
-            else:
-                current_speed = self.current_velocity
-                # now create the waypoints ahead
-                for i in range(LOOKAHEAD_WPS):
-                    wp_new = Waypoint()
-                    wp_extract = self.current_waypoints[next_waypoint_index]
-                    wp_new.pose = wp_extract.pose
-
-                    if(current_speed < self.max_speed):
-                        # find the distane to the closest waypoint
-                        if(i == 0):
-                            dist = self.calculate_distance(self.current_waypoints[next_waypoint_index])
-                        else:
-                            dist = self.distance(self.current_waypoints, next_waypoint_index, next_waypoint_index + 1)
-
-                        target_speed = min(math.sqrt(current_speed * current_speed + 2 * MAX_DECEL * dist), self.max_speed)
-                        wp_new.twist.twist.linear.x = target_speed
-
-                    else:
-                        wp_new.twist.twist.linear.x = self.max_speed
-
-                    # add to the Lane waypoints list
-                    lane.waypoints.append(wp_new)
-                    # then increment the next_waypoint_index, considering circlic nature of list
-                    next_waypoint_index = (next_waypoint_index + 1) % number_waypoints
-
-            self.final_waypoints_pub.publish(lane)
-            '''
 
             if (self.traffic_stop_waypoint_index != -1 
                 and self.is_in_braking_distance()):
@@ -193,6 +129,16 @@ class WaypointUpdater(object):
                     next_waypoint_index = (next_waypoint_index + 1) % number_waypoints
 
             self.final_waypoints_pub.publish(lane)
+        
+
+    def pose_cb(self, msg):
+
+        self.current_pose = msg
+
+        # Calculate the yaw by utilising a transform from quaternion to euler
+        orientation = msg.pose.orientation
+        quaternion = [orientation.x, orientation.y, orientation.z, orientation.w]
+        _, _, self.yaw = tf.transformations.euler_from_quaternion(quaternion)
 
     def is_in_braking_distance(self):
         if self.current_velocity:
