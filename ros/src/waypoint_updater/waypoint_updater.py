@@ -127,6 +127,7 @@ class WaypointUpdater(object):
                     lane.waypoints.append(wp_new)
                     # then increment the next_waypoint_index, considering circlic nature of list
                     next_waypoint_index = (next_waypoint_index + 1) % number_waypoints
+                lane.waypoints = self.accelerate(lane.waypoints)
 
             self.final_waypoints_pub.publish(lane)
         
@@ -261,6 +262,19 @@ class WaypointUpdater(object):
             if vel < 1.:
                 vel = 0.
             wp.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
+        return waypoints
+
+    def accelerate(self, waypoints):
+        # initialize starting velocity as current velocity
+        if self.current_velocity != None:
+            vel = self.current_velocity
+        else:
+            vel = 0
+        #TODO: replace simple step up velocity accelecation
+        step = 0.3
+        for wp in waypoints:
+            vel += step
+            wp.twist.twist.linear.x = min(vel, self.max_speed)
         return waypoints
 
     def current_velocity_cb(self, msg):
