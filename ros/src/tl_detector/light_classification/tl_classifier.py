@@ -10,7 +10,7 @@ class TLClassifier(object):
     def __init__(self):
         #TODO DONE load classifier
         self.debug = False
-        self.capture_images = True
+        self.capture_images = False
         self.verbose = True
 
         rospack = rospkg.RosPack()
@@ -35,73 +35,108 @@ class TLClassifier(object):
     def __del__(self):
         if self.verbose:
             self.traffic_waypoint_sub.unregister()
-
-    def LeNet(self, x):    
+    
+    def LeNet(self, x):  
+ 
         # Hyperparameters
         mu = 0
-        sigma = 0.01
+        sigma = 0.1
         Padding='VALID'
-        W_lambda = 3.0
-
-        if self.debug:
-            print('[TL Classifier] input shape: ', x.shape)
+        W_lambda = 5.0
     
-        conv1_W = tf.Variable(tf.truncated_normal(shape=(60, 40, 3, 8), mean = mu, stddev = sigma))
-        conv1_b = tf.Variable(tf.zeros(8))
+        conv1_W = tf.Variable(tf.truncated_normal(shape=(6, 4, 3, 3), mean = mu, stddev = sigma))
+        conv1_b = tf.Variable(tf.zeros(3))
         conv1   = tf.nn.conv2d(x, conv1_W, strides=[1, 1, 1, 1], padding=Padding) + conv1_b
-
+        if self.debug:
+            print("x shape: ", x.shape)
+            print("conv1_W shape: ", conv1_W.shape)
+            print("conv1_b shape: ", conv1_b.shape)
+            print("conv1 shape: ", conv1.shape)
+    
         # L2 Regularization
         conv1_W = -W_lambda*conv1_W
+        if self.debug:
+            print("conv1_W (after L2 1) shape: ", conv1_W.shape)
     
         # Activation.
         conv1 = tf.nn.relu(conv1)
+        if self.debug:
+            print("conv1 (after Activiateion) shape: ", conv1.shape)
     
         # Pooling...
         conv1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding=Padding)
-        
+        if self.debug:
+            print("conv1 (after Pooling 1) shape: ", conv1.shape)
+    
         # Layer 2: Convolutional...
-        conv2_W = tf.Variable(tf.truncated_normal(shape=(30, 20, 8, 32), mean = mu, stddev = sigma))
-        conv2_b = tf.Variable(tf.zeros(32))
+        conv2_W = tf.Variable(tf.truncated_normal(shape=(6, 4, 3, 6), mean = mu, stddev = sigma))
+        conv2_b = tf.Variable(tf.zeros(6))
         conv2   = tf.nn.conv2d(conv1, conv2_W, strides=[1, 1, 1, 1], padding=Padding) + conv2_b
-        
+        if self.debug:
+            print("conv2_W shape: ", conv2_W.shape)
+            print("conv2_b shape: ", conv2_b.shape)
+            print("conv2 shape: ", conv2.shape)
+    
         # L2 Regularization
         conv2 = -W_lambda*conv2
-        
+        if self.debug:
+            print("conv2 shape after L2: ", conv2.shape)
+    
         # Activation.
         conv2 = tf.nn.relu(conv2)
+        if self.debug:
+            print("conv2 shape after activation: ", conv2.shape)
+    
         # Pooling...
         conv2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding=Padding)
-        
+        if self.debug:
+            print("conv2 shape after pooling: ", conv2.shape)
+
         # Flatten...
         fc0   = flatten(conv2)
     
         # Layer 3: Fully Connected...
-        fc1_W = tf.Variable(tf.truncated_normal(shape=(1280, 120), mean = mu, stddev = sigma))
-        fc1_b = tf.Variable(tf.zeros(120))
+        fc1_W = tf.Variable(tf.truncated_normal(shape=(4356, 60), mean = mu, stddev = sigma))
+        fc1_b = tf.Variable(tf.zeros(60))
         
+        if self.debug:
+            print("fc0", fc0.shape)
+            print("fc1_W", fc1_W.shape)
+            print("fc1_b", fc1_b.shape)
         fc1   = tf.matmul(fc0, fc1_W) + fc1_b
-           
+        if self.debug:
+            print("fc1", fc1.shape)
+    
         # Activation.
         fc1    = tf.nn.relu(fc1)
-           
+        if self.debug:
+            print("fc1 after Activation", fc1.shape)
+    
         # Layer 4: Fully Connected...
-        fc2_W  = tf.Variable(tf.truncated_normal(shape=(120, 84), mean = mu, stddev = sigma))
-        fc2_b  = tf.Variable(tf.zeros(84))
+        fc2_W  = tf.Variable(tf.truncated_normal(shape=(60, 30), mean = mu, stddev = sigma))
+        fc2_b  = tf.Variable(tf.zeros(30))
         fc2    = tf.matmul(fc1, fc2_W) + fc2_b
-            
+        if self.debug:
+            print("fc2_W shape: ", fc2_W.shape)
+            print("fc2_b shape: ", fc2_b.shape)
+            print("fc2 shape: ", fc2.shape)
+    
         # Activation.
         fc2    = tf.nn.relu(fc2)
-
-        # Layer 5: Fully Connected. Input = 84. Output = 3.
-        fc3_W  = tf.Variable(tf.truncated_normal(shape=(84, 3), mean = mu, stddev = sigma))
+        if self.debug:
+            print("fc2 shape after activation: ", fc2.shape)
+    
+        # Layer 5: Fully Connected. Input = 30. Output = 3.
+        fc3_W  = tf.Variable(tf.truncated_normal(shape=(30, 3), mean = mu, stddev = sigma))
         fc3_b  = tf.Variable(tf.zeros(3))
         logits = tf.matmul(fc2, fc3_W) + fc3_b
-
         if self.debug:
-            print('[TL Classifier] done with logits... ')
-
+            print("fc3_W shape: ", fc3_W.shape)
+            print("fc3_b shape: ", fc3_b.shape)
+            print("logits shape: ", logits.shape)
+    
         return logits
-
+    
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
 
