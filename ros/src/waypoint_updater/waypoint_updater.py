@@ -145,9 +145,9 @@ class WaypointUpdater(object):
         if self.current_velocity:
             p1 = self.current_waypoints[self.traffic_stop_waypoint_index].pose.pose.position
             p2 = self.current_waypoints[self.next_waypoint_index].pose.pose.position
-            distance = self.calc_position_distance(p1, p2) - 2
-            time = distance / self.current_velocity
-            if distance < 1 or self.current_velocity / time >= 4:
+            distance = self.calc_position_distance(p1, p2)
+            dt = distance / self.current_velocity
+            if distance < 2 or self.current_velocity / dt >= (MAX_DECEL * .8):
                 return True
         return False
 
