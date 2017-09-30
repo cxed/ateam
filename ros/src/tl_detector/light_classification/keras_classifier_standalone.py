@@ -1,8 +1,6 @@
 #!/usr/bin/env python
-import tensorflow as tf
 import numpy as np
 import cv2
-from tensorflow.contrib.layers import flatten
 from keras.models import load_model
 
 class TLClassifierKerasStandalone:
@@ -34,6 +32,7 @@ class TLClassifierKerasStandalone:
 
         """
         #TODO implement light color prediction
+        choices = {0: "GREEN", 1: "YELLOW", 2: "RED", 3: "UNKNOWN"}
 
         if self.capture_images:
             cv2.imwrite(self.imgPath+str(int(time.clock()*1000))+'.jpg', image)
@@ -49,15 +48,13 @@ class TLClassifierKerasStandalone:
         assert image.shape == (300, 200, 3)
         if self.debug:
             print('[TL Classifier] assertion ok: ')
-        
-        choices = {0: "GREEN", 1: "YELLOW", 2: "RED", 3: "UNKNOWN"}
 
         image = self.normalize_image(image)
         res = None
         res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
         image = res.reshape(1, 150, 100, 3)                  
-        prediction = self.model.predict_classes(image, verbose=0)
-        result = choices.get(prediction[0], "UNKNOWN")
+        classification = self.model.predict_classes(image, verbose=0)
+        result = choices.get(classification[0], "UNKNOWN")
 
         if self.verbose:
             print('[TL Classifier] ' + result + ' detected.')

@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 from styx_msgs.msg import TrafficLight, TrafficLightArray
 from std_msgs.msg import Int32
-import tensorflow as tf
 import numpy as np
 import cv2, rospkg, rospy, time
-from tensorflow.contrib.layers import flatten
+from keras.models import load_model
 
 class TLClassifier(object):
     def __init__(self):
@@ -15,128 +14,22 @@ class TLClassifier(object):
 
         rospack = rospkg.RosPack()
         self.imgPath = str(rospack.get_path('tl_detector'))+'/light_classification/pics/'
-        modelCheckpointFile = str(rospack.get_path('tl_detector'))+'/light_classification'
-        rospy.loginfo('[TL Classifier] model checkpoint file: ' + modelCheckpointFile)
-        
-        self.x = tf.placeholder(tf.float32, (None, 150, 100, 3))
-        self.y = tf.placeholder(tf.int32, (None))
-        self.logits = self.LeNet(tf.cast(self.x, tf.float32))
-        saver = tf.train.Saver()
-        self.sess = tf.Session()        
-        saver.restore(self.sess, tf.train.latest_checkpoint(modelCheckpointFile))
-
+        self.model_path = str(rospack.get_path('tl_detector'))+'/light_classification/'
+        #self.model = load_model(model_path + 'keras_model.h5')
         if self.verbose:
             self.waypoint = None
             self.traffic_waypoint_sub = rospy.Subscriber('/traffic_waypoint', Int32, self.get_traffic_waypoint)
 
         if self.debug:
             rospy.loginfo('[TL Classifier] constructor completed: ')
+    
+    def normalize_image(self, image):
+        r, g, b = cv2.split(image)
+        r = (r - 128)/128
+        g = (g - 128)/128
+        b = (b - 128)/128
+        return cv2.merge((r, g, b))
 
-    def __del__(self):
-        if self.verbose:
-            self.traffic_waypoint_sub.unregister()
-    
-    def LeNet(self, x):  
- 
-        # Hyperparameters
-        mu = 0
-        sigma = 0.1
-        Padding='VALID'
-        W_lambda = 5.0
-    
-        conv1_W = tf.Variable(tf.truncated_normal(shape=(6, 4, 3, 3), mean = mu, stddev = sigma))
-        conv1_b = tf.Variable(tf.zeros(3))
-        conv1   = tf.nn.conv2d(x, conv1_W, strides=[1, 1, 1, 1], padding=Padding) + conv1_b
-        if self.debug:
-            print("x shape: ", x.shape)
-            print("conv1_W shape: ", conv1_W.shape)
-            print("conv1_b shape: ", conv1_b.shape)
-            print("conv1 shape: ", conv1.shape)
-    
-        # L2 Regularization
-        conv1_W = -W_lambda*conv1_W
-        if self.debug:
-            print("conv1_W (after L2 1) shape: ", conv1_W.shape)
-    
-        # Activation.
-        conv1 = tf.nn.relu(conv1)
-        if self.debug:
-            print("conv1 (after Activiateion) shape: ", conv1.shape)
-    
-        # Pooling...
-        conv1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding=Padding)
-        if self.debug:
-            print("conv1 (after Pooling 1) shape: ", conv1.shape)
-    
-        # Layer 2: Convolutional...
-        conv2_W = tf.Variable(tf.truncated_normal(shape=(6, 4, 3, 6), mean = mu, stddev = sigma))
-        conv2_b = tf.Variable(tf.zeros(6))
-        conv2   = tf.nn.conv2d(conv1, conv2_W, strides=[1, 1, 1, 1], padding=Padding) + conv2_b
-        if self.debug:
-            print("conv2_W shape: ", conv2_W.shape)
-            print("conv2_b shape: ", conv2_b.shape)
-            print("conv2 shape: ", conv2.shape)
-    
-        # L2 Regularization
-        conv2 = -W_lambda*conv2
-        if self.debug:
-            print("conv2 shape after L2: ", conv2.shape)
-    
-        # Activation.
-        conv2 = tf.nn.relu(conv2)
-        if self.debug:
-            print("conv2 shape after activation: ", conv2.shape)
-    
-        # Pooling...
-        conv2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding=Padding)
-        if self.debug:
-            print("conv2 shape after pooling: ", conv2.shape)
-
-        # Flatten...
-        fc0   = flatten(conv2)
-    
-        # Layer 3: Fully Connected...
-        fc1_W = tf.Variable(tf.truncated_normal(shape=(4356, 60), mean = mu, stddev = sigma))
-        fc1_b = tf.Variable(tf.zeros(60))
-        
-        if self.debug:
-            print("fc0", fc0.shape)
-            print("fc1_W", fc1_W.shape)
-            print("fc1_b", fc1_b.shape)
-        fc1   = tf.matmul(fc0, fc1_W) + fc1_b
-        if self.debug:
-            print("fc1", fc1.shape)
-    
-        # Activation.
-        fc1    = tf.nn.relu(fc1)
-        if self.debug:
-            print("fc1 after Activation", fc1.shape)
-    
-        # Layer 4: Fully Connected...
-        fc2_W  = tf.Variable(tf.truncated_normal(shape=(60, 30), mean = mu, stddev = sigma))
-        fc2_b  = tf.Variable(tf.zeros(30))
-        fc2    = tf.matmul(fc1, fc2_W) + fc2_b
-        if self.debug:
-            print("fc2_W shape: ", fc2_W.shape)
-            print("fc2_b shape: ", fc2_b.shape)
-            print("fc2 shape: ", fc2.shape)
-    
-        # Activation.
-        fc2    = tf.nn.relu(fc2)
-        if self.debug:
-            print("fc2 shape after activation: ", fc2.shape)
-    
-        # Layer 5: Fully Connected. Input = 30. Output = 3.
-        fc3_W  = tf.Variable(tf.truncated_normal(shape=(30, 3), mean = mu, stddev = sigma))
-        fc3_b  = tf.Variable(tf.zeros(3))
-        logits = tf.matmul(fc2, fc3_W) + fc3_b
-        if self.debug:
-            print("fc3_W shape: ", fc3_W.shape)
-            print("fc3_b shape: ", fc3_b.shape)
-            print("logits shape: ", logits.shape)
-    
-        return logits
-    
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
 
@@ -148,7 +41,10 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
+        model = load_model(self.model_path + 'keras_model.h5')
         save_image = image
+        choices = {0: TrafficLight.GREEN, 1: TrafficLight.YELLOW, 2: TrafficLight.RED}
+
         if self.debug:
             rospy.loginfo('[TL Classifier] invoked... ')
 
@@ -160,29 +56,14 @@ class TLClassifier(object):
         if self.debug:
             rospy.loginfo('[TL Classifier] assertion ok: ')
 
+        image = self.normalize_image(image)
         res = None
         res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-        image = res.reshape(1, 150, 100, 3)
-        assert image.shape == (1, 150, 100, 3)
-        if self.debug:
-            rospy.loginfo('[TL Classifier] reshape ok: ')
-
-        prediction = self.sess.run(self.logits, feed_dict={self.x: image})
-            
-        # get certainty of classification
-        probability=tf.nn.softmax(self.logits)
-        certainties = self.sess.run([probability], feed_dict={self.x: image})
-
-        # get class
-        classification = np.argmax(prediction)
-        certainty = certainties[0][0][classification]
-
-        # in case the classifier is unsure, return unknown
-        if certainty < 0.6:
-            classification = 4
-
-        choices = {0: TrafficLight.GREEN, 1: TrafficLight.YELLOW, 2: TrafficLight.RED}
+        image = res.reshape(1, 150, 100, 3)                  
+        classification = model.predict_classes(image)[0]
         result = choices.get(classification, TrafficLight.UNKNOWN)
+
+        result = TrafficLight.GREEN
 
         if self.capture_images:
             strings = {0: "GREEN/", 1: "YELLOW/", 2: "RED/"}
@@ -198,10 +79,10 @@ class TLClassifier(object):
             rospy.loginfo('[TL Classifier] waypoint: ' + str(self.waypoint))
             if self.waypoint != None:
                 wp = str(self.waypoint)
-            rospy.loginfo('[TL Classifier] Classifier: ' + classification_result + ' detected with certainty: ' + str(certainty))
+            rospy.loginfo('[TL Classifier] Classifier: ' + classification_result)
             rospy.loginfo('[TL Classifier] /traffic/waypoint: ' + wp)
 
-        return  result
+        return result
 
     def get_traffic_waypoint(self, msg):
         self.waypoint = msg.data
