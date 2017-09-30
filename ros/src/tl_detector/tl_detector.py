@@ -47,7 +47,7 @@ class TLDetector(object):
 
         self.bridge = CvBridge()
         #TODO Markus Meyerhofer. Please uncomment in case classifier is up and running
-        #self.light_classifier = TLClassifier()
+        self.light_classifier = TLClassifier()
         self.listener = tf.TransformListener()
 
         self.state = TrafficLight.UNKNOWN
@@ -72,8 +72,8 @@ class TLDetector(object):
         #simulator_debug_mode = 1 is for using the script with the results from /vehicle/traffic_lights
         #simulator_classifier_mode = is for using the script with the simulator with a classifier working
         #simulator_classifier_mode = is for using the script with the real images from the bagfiles with a classifier working
-        self.simulator_debug_mode = 1
-        self.simulator_classifier_mode = 0
+        self.simulator_debug_mode = 0
+        self.simulator_classifier_mode = 1
         self.realimages_classifier_mode = 0
         self.save_images_simulator = 0
         self.save_images_real = 0
@@ -305,8 +305,8 @@ class TLDetector(object):
             
         #Get classification
         #TODO Markus Meyerhofer. Please change in case classifier is up and running
-        #return self.light_classifier.get_classification(cv_cropped_image)
-        return TrafficLight.UNKNOWN
+        return self.light_classifier.get_classification(cv_cropped_image)
+        #return TrafficLight.UNKNOWN
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
