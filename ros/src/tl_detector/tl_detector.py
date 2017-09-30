@@ -14,7 +14,7 @@ import yaml
 import numpy as np
 import time
 
-STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 2
 
 class TLDetector(object):
     def __init__(self):
