@@ -4,6 +4,7 @@ from std_msgs.msg import Int32
 import numpy as np
 import cv2, rospkg, rospy, time
 from keras.models import load_model
+import tensorflow as tf
 
 class TLClassifier(object):
     def __init__(self):
@@ -15,7 +16,9 @@ class TLClassifier(object):
         rospack = rospkg.RosPack()
         self.imgPath = str(rospack.get_path('tl_detector'))+'/light_classification/pics/'
         self.model_path = str(rospack.get_path('tl_detector'))+'/light_classification/'
-        #self.model = load_model(model_path + 'keras_model.h5')
+        self.model = load_model(self.model_path + 'keras_model.h5')
+        self.model._make_predict_function()
+        self.graph = tf.get_default_graph()
         if self.verbose:
             self.waypoint = None
             self.traffic_waypoint_sub = rospy.Subscriber('/traffic_waypoint', Int32, self.get_traffic_waypoint)
@@ -41,7 +44,7 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
-        model = load_model(self.model_path + 'keras_model.h5')
+        #model = load_model(self.model_path + 'keras_model.h5')
         save_image = image
         choices = {0: TrafficLight.GREEN, 1: TrafficLight.YELLOW, 2: TrafficLight.RED}
 
@@ -60,10 +63,12 @@ class TLClassifier(object):
         res = None
         res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
         image = res.reshape(1, 150, 100, 3)                  
-        classification = model.predict_classes(image)[0]
+        #classification = model.predict_classes(image)[0]
+        with self.graph.as_default():
+            classification = self.model.predict_classes(image)[0]
         result = choices.get(classification, TrafficLight.UNKNOWN)
 
-        result = TrafficLight.GREEN
+        #result = TrafficLight.GREEN
 
         if self.capture_images:
             strings = {0: "GREEN/", 1: "YELLOW/", 2: "RED/"}
