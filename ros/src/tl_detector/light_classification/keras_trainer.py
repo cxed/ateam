@@ -1,7 +1,5 @@
 import os, cv2
 import numpy as np
-import random as rnd
-from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from sklearn.preprocessing import LabelBinarizer
 from keras.models import Sequential
@@ -110,19 +108,11 @@ def set_image_paths():
 debug = False
 show_epochs = True
 
-X_train = np.ndarray(shape=(0, 150, 100, 3))
-Y_train = np.ndarray(shape=(0))
-X_test = np.ndarray(shape=(0, 150, 100, 3))
-Y_test = np.ndarray(shape=(0))
-X_val = np.ndarray(shape=(0, 150, 100, 3))
-Y_val = np.ndarray(shape=(0))
-
 X_train, Y_train, X_test, Y_test = set_image_paths()
 x_train, y_train = shuffle(X_train, Y_train)
 
 label_binarizer = LabelBinarizer()
 y_one_hot = label_binarizer.fit_transform(y_train)
-assert y_one_hot.shape == (1075, 3), 'y_one_hot is not the correct shape.  It\'s {}, it should be (1075, 3)'.format(y_one_hot.shape)
 
 model = Sequential()
 model.add(Conv2D(32, (3, 3), input_shape=(150, 100, 3)))
@@ -131,22 +121,25 @@ model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Conv2D(32, (3, 3)))
 model.add(Activation('relu'))
+model.add(Dropout(0.1))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Conv2D(64, (3, 3)))
 model.add(Activation('relu'))
+model.add(Dropout(0.3))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
-model.add(Flatten())
+model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
 model.add(Dense(64))
 model.add(Activation('relu'))
 model.add(Dropout(0.5))
 model.add(Dense(3))
-model.add(Activation('softmax'))
+model.add(Activation('sigmoid'))
 
-model.compile('adam', 'categorical_crossentropy', ['accuracy'])
+#model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
+
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 history = model.fit(X_train, y_one_hot, epochs=50, validation_split=0.2, verbose=2)
-
 
 # Evaluate
 y_one_hot_test = label_binarizer.fit_transform(Y_test)
@@ -181,7 +174,7 @@ if eval_green:
             res = None
             res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
             image = res.reshape(1, 150, 100, 3)                  
-            prediction = model.predict(image, verbose=0)
+            prediction = model.predict_classes(image, verbose=0)
             result = choices.get(prediction[0], "UNKNOWN")
             #print('Result: Expected GREEN - Detected: ', result)
             num_images += 1
@@ -197,7 +190,7 @@ if eval_yellow:
             res = None
             res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
             image = res.reshape(1, 150, 100, 3)                     
-            prediction = model.predict(image, verbose=0)
+            prediction = model.predict_classes(image, verbose=0)
             result = choices.get(prediction[0], "UNKNOWN")
             #print('Result: Expected YELLOW - Detected: ', result)
             num_images += 1
@@ -213,7 +206,7 @@ if eval_red:
             res = None
             res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
             image = res.reshape(1, 150, 100, 3)                     
-            prediction = model.predict(image, verbose=0)
+            prediction = model.predict_classes(image, verbose=0)
             result = choices.get(prediction[0], "UNKNOWN")
             #print('Result: Expected RED - Detected: ', result)
             num_images += 1
