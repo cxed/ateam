@@ -1,138 +1,142 @@
-import os, cv2
+# Import useful packeges:
 import numpy as np
+import cv2, os, pickle, glob
+from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
-from sklearn.preprocessing import LabelBinarizer
+import random
 from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Flatten, Dropout
 from keras.layers import Conv2D, MaxPooling2D
 from keras.regularizers import l2
+from sklearn.preprocessing import LabelBinarizer
 
-    # scale images depending on extension/image type
+EPOCHS = 3
+
 def load_image(image_path):
-        
+    
     image = cv2.imread(image_path) 
-    image = cv2.resize(image,None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-    image = normalize_image(image)
-     
-        # scale image (0-255)
+    image = cv2.resize(image,(32,32), interpolation = cv2.INTER_CUBIC)
+    #image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    #image = normalize_image(image)
+
+    '''
+    # scale image (0-255)
     if image_path[-4:] == '.png':
         image = image.astype(np.float32)*255
-      
-        # remove alpha channel if present
+    '''
+
+    # remove alpha channel if present
     if image.shape[2] == 4:
         b, g, r, a = cv2.split(image)
         image = np.dstack((r,g,b))
-    
+
     return image
 
-def normalize_image(image):
-    r, g, b = cv2.split(image)
-    r = (r - 128)/128
-    g = (g - 128)/128
-    b = (b - 128)/128
-    return cv2.merge((r, g, b))
+tr_red_images = glob.glob('train_images/RED/*')
+tr_yellow_images = glob.glob('train_images/YELLOW/*')
+tr_green_images = glob.glob('train_images/GREEN/*')
 
-def set_image_paths():
-        
-        # load training data
-    dir = './augmented_images'
-    green_file_path = dir + '/GREEN/'
-    yellow_file_path = dir + '/YELLOW/'
-    red_file_path = dir + '/RED/'
+# print out how many images there were in the data
+print('# red images: ', len(tr_red_images))
+print('# yellow images: ', len(tr_yellow_images))
+print('# green images: ', len(tr_green_images))
 
-        # add training images
-    images = []
-    labels = []
-    green_images=os.listdir(green_file_path) 
-    for green_image_path in green_images:
-        if type(green_image_path)==type("string"):
-            image = load_image(green_file_path + green_image_path)
-            images.append(image)
-            labels.append(0)
+images = []
+labels = []
+
+# Set how many images you want to use on training and testing
+# should replace this DataGenerator because this is clumsy and I am neglecting lots of data
+# This is for each colour
+train_num = 5000
+test_num = 5000
+
+#randomly select images from red set and remove them so that they cannot be selected again
+for i in range(train_num):
+    choice = random.randint(0, len(tr_red_images) - 1)
+    image = load_image(tr_red_images[choice])
+    images.append(image)
+    labels.append(2)
+    del tr_red_images[choice]
     
-    yellow_images=os.listdir(yellow_file_path) 
-    for yellow_image_path in yellow_images:
-        if type(yellow_image_path)==type("string"):
-            image = load_image(yellow_file_path + yellow_image_path)
-            images.append(image)
-            labels.append(1)
-                            
-    red_images=os.listdir(red_file_path) 
-    for red_image_path in red_images:
-        if type(red_image_path)==type("string"):
-            image = load_image(red_file_path + red_image_path)
-            images.append(image)
-            labels.append(2)
-        
-    X_train = np.array(images)
-    Y_train = np.array(labels)
-
-        # load test data
-    dir = './test_images'
-    green_file_path = dir + '/GREEN/'
-    yellow_file_path = dir + '/YELLOW/'
-    red_file_path = dir + '/RED/'
-
-        # add test images
-    test_images = []
-    test_labels = []
-    X_val = []
-    Y_val = []
-    green_images=os.listdir(green_file_path) 
-    for green_image_path in green_images:
-        if type(green_image_path)==type("string"):
-            image = load_image(green_file_path + green_image_path)
-            test_images.append(image)
-            test_labels.append(0)
+# yellow
+for i in range(train_num):
+    choice = random.randint(0, len(tr_yellow_images) - 1)
+    image = load_image(tr_yellow_images[choice])
+    images.append(image)
+    labels.append(1)
+    del tr_yellow_images[choice]
     
-    yellow_images=os.listdir(yellow_file_path) 
-    for yellow_image_path in yellow_images:
-        if type(yellow_image_path)==type("string"):
-            image = load_image(yellow_file_path + yellow_image_path)
-            test_images.append(image)
-            test_labels.append(1)
-                            
-    red_images=os.listdir(red_file_path) 
-    for red_image_path in red_images:
-        if type(red_image_path)==type("string"):
-            image = load_image(red_file_path + red_image_path)
-            test_images.append(image)
-            test_labels.append(2)
+# green
+for i in range(train_num):
+    choice = random.randint(0, len(tr_green_images) - 1)
+    image = load_image(tr_green_images[choice])
+    images.append(image)
+    labels.append(0)
+    del tr_green_images[choice]
+    
+X_train = np.array(images)
+y_train = np.array(labels)
 
-    X_test = np.array(test_images)
-    Y_test = np.array(test_labels)
+print('Shape of X_train: ', X_train.shape)
+print('Shape of y_train: ', y_train.shape)
 
-    return X_train, Y_train, X_test, Y_test
+# Now continue to work on the test set, ignoring images that were previously added    
+    
+images = []
+labels = []
 
+# Test set    
+# red
+for i in range(test_num):
+    choice = random.randint(0, len(tr_red_images) - 1)
+    image = load_image(tr_red_images[choice])
+    images.append(image)
+    labels.append(2)
+    del tr_red_images[choice]
+    
+# yellow
+for i in range(test_num):
+    choice = random.randint(0, len(tr_yellow_images) - 1)
+    image = load_image(tr_yellow_images[choice])
+    images.append(image)
+    labels.append(1)
+    del tr_yellow_images[choice]
+    
+# green
+for i in range(test_num):
+    choice = random.randint(0, len(tr_green_images) - 1)
+    image = load_image(tr_green_images[choice])
+    images.append(image)
+    labels.append(0)
+    del tr_green_images[choice]
+    
+X_test = np.array(images)
+y_test = np.array(labels)
 
-debug = False
-show_epochs = True
+print('Shape of X_test: ', X_test.shape)
+print('Shape of y_test: ', y_test.shape)
 
-from keras import backend as K
-
-img_width, img_height = 150, 100
-if K.image_data_format() == 'channels_first':
-    input_shape = (3, img_width, img_height)
-else:
-    input_shape = (img_width, img_height, 3)
-
-X_train, Y_train, X_test, Y_test = set_image_paths()
-x_train, y_train = shuffle(X_train, Y_train)
+X_train, y_train = shuffle(X_train, y_train)
+#X_train, X_validation, y_train, y_validation = train_test_split(X_train, y_train, test_size=0.2, random_state=1024)
+X_test, y_test = shuffle(X_test, y_test)
+print('Done with shuffle and split')
 
 label_binarizer = LabelBinarizer()
 y_one_hot = label_binarizer.fit_transform(y_train)
 
 model = Sequential()
-model.add(Conv2D(32, (3, 3), input_shape=input_shape))
+model.add(Conv2D(32, (3, 3), input_shape=(32, 32, 3)))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Conv2D(32, (3, 3)))
 model.add(Activation('relu'))
+model.add(Dropout(0.1))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Conv2D(64, (3, 3)))
 model.add(Activation('relu'))
+model.add(Dropout(0.3))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
@@ -140,15 +144,13 @@ model.add(Dense(64))
 model.add(Activation('relu'))
 model.add(Dropout(0.5))
 model.add(Dense(3))
-model.add(Activation('softmax'))
-
-#model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
+model.add(Activation('sigmoid'))
 
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-history = model.fit(X_train, y_one_hot, epochs=50, validation_split=0.2, verbose=2)
+history = model.fit(X_train, y_one_hot, epochs=EPOCHS, validation_split=0.2, verbose=2)
 
 # Evaluate
-y_one_hot_test = label_binarizer.fit_transform(Y_test)
+y_one_hot_test = label_binarizer.fit_transform(y_test)
 metrics = model.evaluate(X_test, y_one_hot_test)
 for metric_i in range(len(model.metrics_names)):
     metric_name = model.metrics_names[metric_i]
@@ -156,68 +158,57 @@ for metric_i in range(len(model.metrics_names)):
     print('{}: {}'.format(metric_name, metric_value))
 
 from keras.models import load_model
-model.save('./keras_model.h5')
-            
-dir = './test_images'
-green_file_path = dir + '/GREEN/'
-yellow_file_path = dir + '/YELLOW/'
-red_file_path = dir + '/RED/'
+model.save('./keras_model_new.h5')
+
+# check the length of the remaining images for just to be sure that we are in fact removing images
+print('# red images: ', len(tr_red_images))
+print('# yellow images: ', len(tr_yellow_images))
+print('# green images: ', len(tr_green_images))
+
+# Load the model and check the probabilities
+# pick a red, yellow, green
+r_img = load_image(tr_red_images[0])
+y_img = load_image(tr_yellow_images[0])
+g_img = load_image(tr_green_images[0])
+
+r_img = r_img.reshape(1, 32, 32, 3) 
+y_prob = model.predict(r_img) 
+y_classes = y_prob.argmax(axis=-1)
+print(y_classes)
+
+y_img = y_img.reshape(1, 32, 32, 3) 
+y_prob = model.predict(y_img) 
+y_classes = y_prob.argmax(axis=-1)
+print(y_classes)
+
+g_img = g_img.reshape(1, 32, 32, 3) 
+y_prob = model.predict(g_img) 
+y_classes = y_prob.argmax(axis=-1)
+print(y_classes)
+
 choices = {0: "GREEN", 1: "YELLOW", 2: "RED", 3: "UNKNOWN"}
 
-eval_green = False
-eval_yellow = False
-eval_red = False
-            
 num_images = 0
 num_incorrect = 0
-            
-if eval_green:
-    green_images=os.listdir(green_file_path)
-    for green_image_path in green_images:
-        if type(green_image_path)==type("string"):
-            image = cv2.imread(green_file_path + green_image_path)
-            image = normalize_image(image)
-            res = None
-            res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-            image = res.reshape(1, 150, 100, 3)                  
-            prediction = model.predict_classes(image, verbose=0)
-            result = choices.get(prediction[0], "UNKNOWN")
-            #print('Result: Expected GREEN - Detected: ', result)
-            num_images += 1
-            if result != 'GREEN':
-                num_incorrect += 1
 
-if eval_yellow:
-    yellow_images=os.listdir(yellow_file_path) 
-    for yellow_image_path in yellow_images:
-        if type(yellow_image_path)==type("string"):
-            image = cv2.imread(yellow_file_path + yellow_image_path)
-            image = normalize_image(image)
-            res = None
-            res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-            image = res.reshape(1, 150, 100, 3)                     
-            prediction = model.predict_classes(image, verbose=0)
-            result = choices.get(prediction[0], "UNKNOWN")
-            #print('Result: Expected YELLOW - Detected: ', result)
-            num_images += 1
-            if result != 'YELLOW':
-                num_incorrect += 1
+#green_length = len(tr_green_images)
+#yellow_length = len(tr_yellow_images)
+#red_length = len(tr_red_images)
 
-if eval_red:
-    red_images=os.listdir(red_file_path)
-    for red_image_path in red_images:
-        if type(red_image_path)==type("string"):
-            image = cv2.imread(red_file_path + red_image_path)
-            image = normalize_image(image)
-            res = None
-            res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-            image = res.reshape(1, 150, 100, 3)                     
-            prediction = model.predict_classes(image, verbose=0)
-            result = choices.get(prediction[0], "UNKNOWN")
-            #print('Result: Expected RED - Detected: ', result)
-            num_images += 1
-            if result != 'RED':
-                num_incorrect += 1
+green_length = 5000
+yellow_length = 5000
+red_length = 5000
+
+for i in range(green_length):
+    img = load_image(tr_green_images[i])
+    #image = normalize_image(image)
+    res = None    
+    image = image.reshape(1, 32, 32, 3) 
+    classification = model.predict_classes(image, verbose=0)[0]
+    result = choices.get(classification, "UNKNOWN")
+    num_images += 1
+    if result != 'GREEN':
+        num_incorrect += 1
 
 success_rate = 0.0
 if num_incorrect > 0:
@@ -225,5 +216,4 @@ if num_incorrect > 0:
 if num_incorrect == 0:
     success_rate = 100
 
-if (eval_green or eval_yellow or eval_red):
-    print('No Images: ' + str(num_images) + ' incorrect: ' + str(num_incorrect) + ' success rate: ' + str(success_rate) + ' %')
+print('No Images: ' + str(num_images) + ' incorrect: ' + str(num_incorrect) + ' success rate: ' + str(success_rate) + ' %')

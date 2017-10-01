@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 from classifier_standalone import TLClassifierStandalone
+from keras_classifier_standalone import TLClassifierKerasStandalone
 import cv2, os
 
 eval_green = True
-eval_yellow = False
-eval_red = False
+eval_yellow = True
+eval_red = True
+verbose_mode = False
+classifier_type = 'Keras'
 
 dir = './test_images'
 green_file_path = dir + '/GREEN/'
@@ -14,7 +17,11 @@ red_file_path = dir + '/RED/'
 num_images = 0
 num_incorrect = 0
 
-classifier = TLClassifierStandalone()
+if classifier_type == 'Tensorflow':
+    classifier = TLClassifierStandalone()
+
+if classifier_type == 'Keras':
+    classifier = TLClassifierKerasStandalone()
 
 if eval_green:
     green_images=os.listdir(green_file_path) 
@@ -25,7 +32,8 @@ if eval_green:
             num_images += 1
             if result != 'GREEN':
                 num_incorrect += 1
-            print('Expected GREEN - detected: ', result)
+            if verbose_mode:
+                print('Expected GREEN - detected: ', result)
 
 if eval_yellow:
     yellow_images=os.listdir(yellow_file_path) 
@@ -36,7 +44,8 @@ if eval_yellow:
             num_images += 1
             if result != 'YELLOW':
                 num_incorrect += 1
-            print('Expected YELLOW - detected: ', result)
+            if verbose_mode:
+                print('Expected YELLOW - detected: ', result)
 
 if eval_red:
     red_images=os.listdir(red_file_path) 
@@ -47,6 +56,14 @@ if eval_red:
             num_images += 1
             if result != 'RED':
                 num_incorrect += 1
-            print('Expected RED - detected: ', result)
+            if verbose_mode:
+                print('Expected RED - detected: ', result)
 
-print('No Images: ' + str(num_images) + ' incorrect: ' + str(num_incorrect) + ' success rate: ' + str(100.0-100.0*(float(num_incorrect)/float(num_images))) + ' %')
+if (eval_green or eval_yellow or eval_red):
+    print(' ')
+    print('==================================================================================================')
+    print(' ')
+    print('No Images: ' + str(num_images) + ' incorrect: ' + str(num_incorrect) + ' success rate: ' + str(100.0-100.0*(float(num_incorrect)/float(num_images))) + ' %')
+    print(' ')
+    print('==================================================================================================')
+    print(' ')

@@ -10,16 +10,9 @@ class TLClassifierKerasStandalone:
         self.capture_images = False
         self.verbose = False
         
-        self.model = load_model('keras_model.h5')
+        self.model = load_model('./keras_model.h5')
         if self.debug:
             print('[TL Classifier] constructor completed: ')
-
-    def normalize_image(self, image):
-        r, g, b = cv2.split(image)
-        r = (r - 128)/128
-        g = (g - 128)/128
-        b = (b - 128)/128
-        return cv2.merge((r, g, b))
     
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
@@ -49,12 +42,11 @@ class TLClassifierKerasStandalone:
         if self.debug:
             print('[TL Classifier] assertion ok: ')
 
-        image = self.normalize_image(image)
         res = None
-        res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-        image = res.reshape(1, 150, 100, 3)                  
-        classification = self.model.predict_classes(image, verbose=0)
-        result = choices.get(classification[0], "UNKNOWN")
+        res = cv2.resize(image, (32,32), interpolation = cv2.INTER_CUBIC)
+        image = res.reshape(1, 32, 32, 3)
+        classification = self.model.predict_classes(image, verbose=0)[0]
+        result = choices.get(classification, 'UNKNOWN')
 
         if self.verbose:
             print('[TL Classifier] ' + result + ' detected.')
