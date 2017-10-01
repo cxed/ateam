@@ -13,8 +13,8 @@ if K.image_data_format() == 'channels_first':
 else:
     input_shape = (img_width, img_height, 3)
 
-train_data_dir = 'augmented_images'
-validation_data_dir = 'test_images'
+train_data_dir = '/home/xed/u/data/tl_imgs/'
+validation_data_dir = '/home/xed/u/data/tl_imgs_test/'
 nb_train_samples = 2000
 nb_validation_samples = 800
 epochs = 50
@@ -59,14 +59,14 @@ test_datagen = ImageDataGenerator()
 # subfolers of 'data/train', and indefinitely generate
 # batches of augmented image data
 train_generator = train_datagen.flow_from_directory(
-        'augmented_images',  # this is the target directory
+        train_data_dir,  # this is the target directory
         target_size=(150, 100),  # all images will be resized to 150x150
         batch_size=batch_size,
         class_mode='categorical')  # since we use binary_crossentropy loss, we need binary labels
 
 # this is a similar generator, for validation data
 validation_generator = test_datagen.flow_from_directory(
-        'test_images',
+        validation_data_dir,
         target_size=(150, 100),
         batch_size=batch_size,
         class_mode='categorical')
