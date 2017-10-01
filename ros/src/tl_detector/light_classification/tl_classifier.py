@@ -25,13 +25,6 @@ class TLClassifier(object):
 
         if self.debug:
             rospy.loginfo('[TL Classifier] constructor completed: ')
-    
-    def normalize_image(self, image):
-        r, g, b = cv2.split(image)
-        r = (r - 128)/128
-        g = (g - 128)/128
-        b = (b - 128)/128
-        return cv2.merge((r, g, b))
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
@@ -44,7 +37,6 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
-        #model = load_model(self.model_path + 'keras_model.h5')
         save_image = image
         choices = {0: TrafficLight.GREEN, 1: TrafficLight.YELLOW, 2: TrafficLight.RED}
 
@@ -59,18 +51,12 @@ class TLClassifier(object):
         if self.debug:
             rospy.loginfo('[TL Classifier] assertion ok: ')
 
-        #image = self.normalize_image(image)
         res = None
-        #res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-        #image = res.reshape(1, 150, 100, 3)
         res = cv2.resize(image, (32,32), interpolation = cv2.INTER_CUBIC)
         image = res.reshape(1, 32, 32, 3)
-        #classification = model.predict_classes(image)[0]
         with self.graph.as_default():
             classification = self.model.predict_classes(image)[0]
         result = choices.get(classification, TrafficLight.UNKNOWN)
-
-        #result = TrafficLight.GREEN
 
         if self.capture_images:
             strings = {0: "GREEN/", 1: "YELLOW/", 2: "RED/"}

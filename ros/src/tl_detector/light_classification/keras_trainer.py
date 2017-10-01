@@ -10,7 +10,7 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras.regularizers import l2
 from sklearn.preprocessing import LabelBinarizer
 
-EPOCHS = 3
+EPOCHS = 30
 
 def load_image(image_path):
     
@@ -47,8 +47,8 @@ labels = []
 # Set how many images you want to use on training and testing
 # should replace this DataGenerator because this is clumsy and I am neglecting lots of data
 # This is for each colour
-train_num = 5000
-test_num = 5000
+train_num = 10000
+test_num = 10000
 
 #randomly select images from red set and remove them so that they cannot be selected again
 for i in range(train_num):
@@ -201,9 +201,8 @@ red_length = 5000
 
 for i in range(green_length):
     img = load_image(tr_green_images[i])
-    #image = normalize_image(image)
     res = None    
-    image = image.reshape(1, 32, 32, 3) 
+    image = img.reshape(1, 32, 32, 3) 
     classification = model.predict_classes(image, verbose=0)[0]
     result = choices.get(classification, "UNKNOWN")
     num_images += 1
