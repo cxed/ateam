@@ -59,10 +59,12 @@ class TLClassifier(object):
         if self.debug:
             rospy.loginfo('[TL Classifier] assertion ok: ')
 
-        image = self.normalize_image(image)
+        #image = self.normalize_image(image)
         res = None
-        res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
-        image = res.reshape(1, 150, 100, 3)                  
+        #res = cv2.resize(image, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
+        #image = res.reshape(1, 150, 100, 3)
+        res = cv2.resize(image, (32,32), interpolation = cv2.INTER_CUBIC)
+        image = res.reshape(1, 32, 32, 3)
         #classification = model.predict_classes(image)[0]
         with self.graph.as_default():
             classification = self.model.predict_classes(image)[0]
