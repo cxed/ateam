@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Use to trigger captures. tl_detector looks for presence of
+# /dev/shm/X, when found it writes an image and resets by deleting.
+function continuous_trigger {
+    while touch /dev/shm/X; do
+        read 
+        echo CAPTURE
+        ls /tmp/simcapture|tail -n1
+    done
+}
+
+function dedup {
+    # Used to eliminate duplicates.
+    # Find duplicates with
+    # md5sum *png | awk {print $1} | sort | uniq -c
+    # Include them in this list.
+    DD+='c7cb3bd4b65496726e466b64cfbe5a15 '
+    DD+='dd8dd63056663d039064a6aff9930996 '
+    for F in *png; do
+        M5=$(md5sum $F | awk '{print $1}')
+        for D in $DD; do
+          if [ "$M5" == "$D" ]; then
+            echo "FOUND MATCH:"
+            md5sum $F
+          fi
+        done
+    done
+}
+
+function sortbycolor {
+    for F in *png; do
+        display -window 0x2a0ab20 $F
+        echo "Which for $F:"
+        read -n1 C
+        case ${C:-X} in
+           X | R | r | 0) echo RED ; cp -v ${F} R/  ;;
+           Y | y | 1) echo YELLOW ; cp -v ${F} Y/  ;;
+           G | g | 2) echo GREEN ;cp -v ${F} G/  ;;
+        esac
+    done
+}
+
+sortbycolor

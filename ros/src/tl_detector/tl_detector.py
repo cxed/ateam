@@ -13,6 +13,7 @@ import cv2
 import yaml
 import numpy as np
 import time
+import os
 
 STATE_COUNT_THRESHOLD = 2
 
@@ -60,7 +61,7 @@ class TLDetector(object):
         self.best_waypoint = 0
         self.last_car_position = 0
         self.last_light_pos_waypoints = []
-	self.last_stop_pos_waypoints = []
+        self.last_stop_pos_waypoints = []
 
         #Variables that make sure the light is not being considered if its way out
         self.IGNORE_FAR_LIGHT_REAL = 20.5
@@ -72,11 +73,13 @@ class TLDetector(object):
         #simulator_debug_mode = 1 is for using the script with the results from /vehicle/traffic_lights
         #simulator_classifier_mode = is for using the script with the simulator with a classifier working
         #simulator_classifier_mode = is for using the script with the real images from the bagfiles with a classifier working
-        self.simulator_debug_mode = 0
+        self.simulator_debug_mode = False
         self.simulator_classifier_mode = 1
         self.realimages_classifier_mode = 0
         self.save_images_simulator = 0
-        self.save_images_real = 0
+        self.save_images_real = False
+        self.c = 0 # Counter for distinct naming of images.
+
 
         rospy.spin()
 
@@ -92,13 +95,12 @@ class TLDetector(object):
         self.lights = msg.lights
 
     def image_cb(self, msg):
-
         self.has_image = True
         self.camera_image = msg
         #Start of the node since and image came in. Take different branch depending on the configuration
-        if self.simulator_debug_mode==1:
+        if self.simulator_debug_mode:
             light_wp, state = self.process_traffic_lights_simulation()
-        elif ((self.realimages_classifier_mode==1 or self.simulator_classifier_mode==1) and (self.simulator_debug_mode==0)):
+        elif ((self.realimages_classifier_mode==1 or self.simulator_classifier_mode==1) and not self.simulator_debug_mode):
             light_wp, state = self.process_traffic_lights()
 
         '''
@@ -264,7 +266,14 @@ class TLDetector(object):
             return False
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
-
+        # ===== Chris added this to extract images interactively on demand by doing `touch /dev/shmX`.
+        #triggerfile= '/dev/shm/X'
+        #if os.path.isfile(triggerfile):
+            #self.c += 1
+            #cv2.imwrite('/tmp/simcapture/C%05d.png'%self.c, cv_image)
+            #rospy.loginfo('[TLNode_Simu] Saved Image from bagfile - %05d.png'%self.c)
+            #os.remove(triggerfile)
+            
         # Invoke projection only for the simulator where this works reasonably well for the
         # bagfiles just take the middle of the image and crop around that
         if (self.simulator_classifier_mode==1):
@@ -291,13 +300,13 @@ class TLDetector(object):
             if(self.save_images_simulator==1):
                     self.time=time.clock()
                     path = '/home/student/Pictures/simulated/'
-                    cv2.imwrite(path+str(int(self.time*1000))+'.jpg',cv_cropped_image)
-                    rospy.loginfo('[TLNode_Real] Saved Image from simulator ')
+                    cv2.imwrite(path+str(int(self.time*1000))+'.png',cv_cropped_image)
+                    rospy.loginfo('[TLNode_Simu] Saved Image from simulator ')
 
-            if(self.save_images_real==1):
+            if self.save_images_real:
                     self.time=time.clock()
-                    path = '/home/student/Pictures/bagfiles/'
-                    cv2.imwrite(path+str(int(self.time*1000))+'.jpg',cv_cropped_image)
+                    path = '/tmp/simcapture/'
+                    cv2.imwrite(path+str(int(self.time*1000))+'.png',cv_cropped_image)
                     rospy.loginfo('[TLNode_Real] Saved Image from bagfile ')
             
             # A publisher to show the cropped images.
