@@ -35,7 +35,7 @@ def normalize_image(image):
 def set_image_paths():
         
         # load training data
-    dir = './sim_images'
+    dir = './augmented_images'
     green_file_path = dir + '/GREEN/'
     yellow_file_path = dir + '/YELLOW/'
     red_file_path = dir + '/RED/'
@@ -108,6 +108,14 @@ def set_image_paths():
 debug = False
 show_epochs = True
 
+from keras import backend as K
+
+img_width, img_height = 150, 100
+if K.image_data_format() == 'channels_first':
+    input_shape = (3, img_width, img_height)
+else:
+    input_shape = (img_width, img_height, 3)
+
 X_train, Y_train, X_test, Y_test = set_image_paths()
 x_train, y_train = shuffle(X_train, Y_train)
 
@@ -115,18 +123,16 @@ label_binarizer = LabelBinarizer()
 y_one_hot = label_binarizer.fit_transform(y_train)
 
 model = Sequential()
-model.add(Conv2D(32, (3, 3), input_shape=(150, 100, 3)))
+model.add(Conv2D(32, (3, 3), input_shape=input_shape))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Conv2D(32, (3, 3)))
 model.add(Activation('relu'))
-model.add(Dropout(0.1))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Conv2D(64, (3, 3)))
 model.add(Activation('relu'))
-model.add(Dropout(0.3))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 
 model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
@@ -134,7 +140,7 @@ model.add(Dense(64))
 model.add(Activation('relu'))
 model.add(Dropout(0.5))
 model.add(Dense(3))
-model.add(Activation('sigmoid'))
+model.add(Activation('softmax'))
 
 #model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
 
