@@ -67,6 +67,9 @@ class TLDetector(object):
         self.save_images_real = False
         self.c = 0 # Counter for distinct naming of images.
 
+        # list to store each traffic light's corresponding waypoint index
+        self.traffic_lights_waypoints = None
+
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
@@ -87,6 +90,11 @@ class TLDetector(object):
 
     def waypoints_cb(self, waypoints):
         self.waypoints = waypoints
+
+        # associate each traffic light to its closest waypoints
+        self.traffic_lights_waypoints = self.associate_trafficlights_to_waypoints(
+            self.waypoints, 
+            self.config['stop_line_positions'])
 
     def traffic_cb(self, msg):
         self.lights = msg.lights
@@ -328,25 +336,26 @@ class TLDetector(object):
         #TODO - DONE - find the closest visible traffic light (if one exists)
         
         #Find where the vehicle is and safe it in car position
-        light_positions = self.config['stop_line_positions']
         if self.pose:
             car_position = self.get_closest_waypoint(self.pose.pose)
             if car_position is not None:
                 self.last_car_position = car_position
         
         # Attribute the light positions to waypoints to use this in later steps
-        light_pos_waypoints = []
-        if self.waypoints is not None:
-            temp_waypoints = self.waypoints
-            for i in range(len(light_positions)):
-                l_pos = self.get_closest_waypoint_light(temp_waypoints, light_positions[i])
-                light_pos_waypoints.append(l_pos)
-            self.last_light_pos_waypoints = light_pos_waypoints
-        else:
-            light_pos_waypoints = self.last_light_pos_waypoints
+        light_positions = self.config['stop_line_positions']
+        # light_pos_waypoints = []
+        # if self.waypoints is not None:
+        #     temp_waypoints = self.waypoints
+        #     for i in range(len(light_positions)):
+        #         l_pos = self.get_closest_waypoint_light(temp_waypoints, light_positions[i])
+        #         light_pos_waypoints.append(l_pos)
+        #     self.last_light_pos_waypoints = light_pos_waypoints
+        # else:
+        #     light_pos_waypoints = self.last_light_pos_waypoints
+        light_pos_waypoints = self.traffic_lights_waypoints
             
         # Get the id of the next light
-        if len(light_pos_waypoints) is not 0:
+        if light_pos_waypoints:
                 # This branch gets taken in case the vehicle is almost through the loop. After the last light.
                 # Then the next light can only be the one that comes first in the loop.
                 if self.last_car_position > max(light_pos_waypoints):
@@ -413,15 +422,17 @@ class TLDetector(object):
         stop_positions = self.config['stop_line_positions']
         
         #Attribute the stopline positions to waypoints to use this in later steps
-        stop_pos_waypoints = []
-        if self.waypoints is not None:
-            temp_waypoints = self.waypoints
-            for i in range(len(stop_positions)):
-                l_pos = self.get_closest_waypoint_light(temp_waypoints, stop_positions[i])
-                stop_pos_waypoints.append(l_pos)
-            self.last_stop_pos_waypoints = stop_pos_waypoints
-        else:
-            stop_pos_waypoints = self.last_stop_pos_waypoints
+        # stop_pos_waypoints = []
+        # if self.waypoints is not None:
+        #     temp_waypoints = self.waypoints
+        #     for i in range(len(stop_positions)):
+        #         l_pos = self.get_closest_waypoint_light(temp_waypoints, stop_positions[i])
+        #         stop_pos_waypoints.append(l_pos)
+        #     self.last_stop_pos_waypoints = stop_pos_waypoints
+        # else:
+        #     stop_pos_waypoints = self.last_stop_pos_waypoints
+        stop_pos_waypoints = self.traffic_lights_waypoints
+        
 
         #Get the traffic light positions not from the config but from the vehicle/traffic_lights topic
         light_positions = []
@@ -511,6 +522,17 @@ class TLDetector(object):
                 best_waypoint = i
                 min_dist = dist
         return best_waypoint
+
+    def associate_trafficlights_to_waypoints(self, waypoints, stopline_positions):
+        """ Associate each traffic light in a list to their closest waypoints
+        Return: a list with the same size as lights where each element contains the closest waypoint index
+                of its corresponding traffic light
+        """
+        associations = []
+        for position in stopline_positions:
+            wp_index = self.get_closest_waypoint_light(waypoints, position)
+            associations.append(wp_index)
+        return associations
 
 if __name__ == '__main__':
     try:
