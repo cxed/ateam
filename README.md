@@ -8,11 +8,19 @@ Udacity Term 3 Final Capstone Project
 ## The A Team
 
 ### Members
-  - 0 Chris _@cxed_ UTC-7
-  - 1 Vince _@vincec_ UTC-7
-  - 2 William _@williambeverly_ UTC+2
-  - 3 Andreas _@jankl.andreas_ UTC+2
-  - 4 Markus _@markus.meyerhofer_ UTC+2
+  - 0 Chris X Edwards _@cxed_ UTC-7
+  - 1 Vince Chan _@vincec_ UTC-7
+  - 2 William Yuill _@williambeverly_ UTC+2
+  - 3 Andreas Jankl _@jankl.andreas_ UTC+2
+  - 4 Markus Meyerhofer _@markus.meyerhofer_ UTC+2
+
+### Identification Note
+Email addresses were requested but since this is a public forum
+privacy concerns were discussed on Slack where **@stephen** (Stephen
+Welch) said, "Ok, I've discussed this here, and I think we can do
+without emails, so long as names are included." (2017-09-15)
+
+Group member Slack usernames are also included.
 
 ### Sub Tasks
 * Chris: easy stuff.
