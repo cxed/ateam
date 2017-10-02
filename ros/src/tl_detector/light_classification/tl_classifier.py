@@ -13,10 +13,19 @@ class TLClassifier(object):
         self.capture_images = False
         self.verbose = True
 
+        # Use is_sim_launch to determine if we are launched in sim or site
+        self.is_sim_launch = rospy.get_param("~sim_launch", False)
+
         rospack = rospkg.RosPack()
         self.imgPath = str(rospack.get_path('tl_detector'))+'/light_classification/pics/'
         self.model_path = str(rospack.get_path('tl_detector'))+'/light_classification/'
-        self.model = load_model(self.model_path + 'keras_model.h5')
+        
+        # determine which model to load
+        if(self.is_sim_launch):
+            self.model = load_model(self.model_path + 'keras_model_sim.h5')
+        else:
+            self.model = load_model(self.model_path + 'keras_model_real.h5')
+
         self.model._make_predict_function()
         self.graph = tf.get_default_graph()
         if self.verbose:
@@ -43,13 +52,22 @@ class TLClassifier(object):
         if self.debug:
             rospy.loginfo('[TL Classifier] invoked... ')
 
-        if image.shape != (300, 200, 3):
-            rospy.loginfo('[TL Classifier] image shape NOK: ' + str(image.shape))
-            return TrafficLight.UNKNOWN
+        if(self.is_sim_launch):
+            if image.shape != (300, 200, 3):
+                rospy.loginfo('[TL Classifier] image shape NOK: ' + str(image.shape))
+                return TrafficLight.UNKNOWN
             
-        assert image.shape == (300, 200, 3)
-        if self.debug:
-            rospy.loginfo('[TL Classifier] assertion ok: ')
+            assert image.shape == (300, 200, 3)
+            if self.debug:
+                rospy.loginfo('[TL Classifier] assertion ok: ')
+        else:
+            if image.shape != (125, 350, 3):
+                rospy.loginfo('[TL Classifier] image shape NOK: ' + str(image.shape))
+                return TrafficLight.UNKNOWN
+            
+            assert image.shape == (125, 350, 3)
+            if self.debug:
+                rospy.loginfo('[TL Classifier] assertion ok: ')
 
         res = None
         res = cv2.resize(image, (32,32), interpolation = cv2.INTER_CUBIC)

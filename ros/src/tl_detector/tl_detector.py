@@ -15,7 +15,7 @@ import numpy as np
 import time
 import os
 
-STATE_COUNT_THRESHOLD = 2
+#STATE_COUNT_THRESHOLD = 2
 
 class TLDetector(object):
     def __init__(self):
@@ -64,8 +64,16 @@ class TLDetector(object):
         #simulator_classifier_mode = is for using the script with the simulator with a classifier working
         #simulator_classifier_mode = is for using the script with the real images from the bagfiles with a classifier working
         self.simulator_debug_mode = False
-        self.simulator_classifier_mode = 0
-        self.realimages_classifier_mode = 1
+        # set the classifier mode
+        if(self.is_sim_launch):
+            self.simulator_classifier_mode = 1
+            self.realimages_classifier_mode = 0
+            self.state_count_threshold = 2
+        else:
+            self.simulator_classifier_mode = 0
+            self.realimages_classifier_mode = 1
+            self.state_count_threshold = 3
+
         self.save_images_simulator = 0
         self.save_images_real = False
         self.c = 0 # Counter for distinct naming of images.
@@ -122,13 +130,13 @@ class TLDetector(object):
         if self.state != state:
             self.state_count = 0
             self.state = state
-        if self.state_count >= STATE_COUNT_THRESHOLD:
+        if self.state_count >= self.state_count_threshold:
             self.last_state = self.state
             light_wp = light_wp if state == TrafficLight.RED else -1
             self.last_wp = light_wp
             self.upcoming_red_light_pub.publish(Int32(light_wp))
 
-        if self.state_count < STATE_COUNT_THRESHOLD:        
+        if self.state_count < self.state_count_threshold:
                 self.state_count += 1
         
     #Newly introduced function calculating a normal beeline distance
@@ -289,7 +297,7 @@ class TLDetector(object):
         if (self.simulator_classifier_mode==1):
             x, y = self.project_to_image_plane(light)
         if (self.realimages_classifier_mode==1):
-            x, y =  350, 475
+            x, y =  684, 450
 
         #TODO - DONE - use light location to zoom in on traffic light in image
         if ((x is False) or (y is False)): # if not (x and y)?
