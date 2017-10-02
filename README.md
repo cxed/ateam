@@ -8,29 +8,6 @@ Udacity Term 3 Final Capstone Project
 ## The A Team
 Slack channel - *#ateam*
 
-### Schedule
-
-Project Due:
-**2017-10-02**
-
-Term Ends: 2017-10-16
-
-```
-Su Mo Tu We Th Fr Sa  
-10 11 12 13 14 15 16  
-17 18 19 20 21 22 23
-24 25 26 27 28 29 30  September 2017       
- 1  2  3  4  5  6  7  October 2017      
- 8  9 10 11 12 13 14  
-15 16 17 18 19 20 21  
-```
-
-### Skype Calls
-* **Success!** 2017-09-10 1500UTC=0800PDT=1700U+2
-* **Success!** 2017-09-17 1500UTC=0900PDT=1800U+2
-* **Success!** 2017-09-24 1500UTC=0900PDT=1800U+2
-* **Possible** 2017-09-29 1430UTC=0830PDT=1730U+2
-
 ### Members
   - 0 Chris _@cxed_ UTC-7
   - 1 Vince _@vincec_ UTC-7
@@ -38,25 +15,74 @@ Su Mo Tu We Th Fr Sa
   - 3 Andreas _@jankl.andreas_ UTC+2
   - 4 Markus _@markus.meyerhofer_ UTC+2
 
-[Team Sign Up Spreadsheet](https://docs.google.com/spreadsheets/d/17I_0q8tylk9Q_Y3GTSq738KkBIoS6SUt1quR5lPPAdg/edit#gid=0)
-
 ### Sub Tasks
-* Team leader 0:
+* Chris: easy stuff.
   - set up team resources (Slack, GitHub, Skype, etc),
-  - documentation
-  - coordination
-  - testing
-  - programming support
-  - removing tabs
+  - documentation, coordination
+  - testing, programming support, removing tabs
+  - Vince did a _lot_ of testing and optimzing of everything
+  - Vince also recorded videos
 * Vince & William: waypoint updater a.k.a. getting the car moving at all.
   - making the car drive
-  - making the car drive smoothly
+  - making the car drive smoothly (direction _and_ speed)
   - making the car drive smoothly as long as we want
   - stopping the car when told that's a good idea
   - resuming the car when told that's a good idea
-* Andreas & Markus: tl_detector, working on the classifier.
+* Andreas & Markus: tl_detector, the classifiers.
   - detecting the state of any visible traffic lights
   - deciding when a stop should be done based on traffic light state
+  - William also helped figure out how to get the classifier working
+  - Chris built training image sets to prevent garbage in/garbage out
+
+### Skype Calls
+* **Success!** 2017-09-10 1500UTC=0800PDT=1700U+2
+* **Success!** 2017-09-17 1500UTC=0900PDT=1800U+2
+* **Success!** 2017-09-24 1500UTC=0900PDT=1800U+2
+* **Success!** 2017-09-29 1430UTC=0830PDT=1730U+2
+
+## Requirements
+
+###  Smoothly follow waypoints in the simulator.
+Our code properly guides the car through all of the waypoints. As
+discussed by many people in `#p-system-integration` there were points
+on the course where it was difficult to maintain control because of
+mysterious simulator performance issues. Our different team members
+had varying levels of success with this ranging from almost no
+problems to very severe impassable points on the course _using the
+same code_. Because so much effort was spent to overcome these high
+interference zones, we ended up with an extremely stable and accurate
+control system that guided the car nearly perfectly (special mention
+of Vince's contribution is deserved here).
+
+###  Stop at traffic lights when needed.
+Our system takes the published video feed and crops out what we
+believe is a sensible sub region. We followed the suggestion implied
+in the project materials to locate that region dynamically using dead
+reckoning but we found this was not especially helpful. With a
+plausible traffic light published when near a known traffic light
+location, the next task was to send this image to a classifier that
+could determine if it was red, yellow, or green. We tried both a
+Tensorflow system and a Keras system, eventually settling on the Keras
+as easier to work with for this particular project. The classifier was
+trained on a large set of images which, for the simulator, was
+extracted from manual driving. For the bag file video, the frames
+were extracted and a classifier trained on a large set of data derived
+from them (13000 unique images of each of red, yellow, green).
+
+###  Stop and restart PID controllers depending on the state of `/vehicle/dbw_enabled`.
+We believe the `dbw_enabled` feature works as required. The simulator
+can be put into and returned from "Manual" mode as expected.
+
+### Confirm that traffic light detection works on real life images.
+We have set the system up so that when launched with the site launcher
+the software behaves with that in mind and can successfully detect
+the state of the traffic light.
+
+## Project Video
+Here is a video showing perfect driving for an entire lap of the
+simulator course.
+
+Video: [A Team - Complete Simulation Success](https://youtu.be/XoXnJ4nqzmE)
 
 ## Project Components
 
@@ -75,8 +101,6 @@ Su Mo Tu We Th Fr Sa
   - input: target trajectory
   - output: control commands to vehicle
 * Here's a handy flowchart for PID tuning.
-
-![PID Tuning](http://support.motioneng.com/Downloads-Notes/Tuning/images/overshoot_flowchart.gif "PID Tuning")
 
 ### Car Info
 * [ROS Interface to Lincoln MKZ DBW System](https://bitbucket.org/DataspeedInc/dbw_mkz_ros/src/)
@@ -106,21 +130,7 @@ Su Mo Tu We Th Fr Sa
 * Code via GitHub
 * README.md
 
-## TODO
-1. The Waypoint Updater Node seems to be a prerequisite to many other components
-   so it is recommended to work on it first.
-2. DBW (Drive By Wire) Node
-3. Traffic Light Detection
-4. Waypoint Updater Node - full functionality.
-
-### Find Tabs To Eliminate
-
-```
-find . -iname '*py' | while read N; do echo "== $N"; grep $'\t' $N ; done
-```
-
 ## Run
-
 ```
 catkin_make && source devel/setup.sh && roslaunch launch/styx.launch
 rosbag play -l just_traffic_light.bag
@@ -136,28 +146,27 @@ rqt_console
 * [Traffic Light Detection Test Video - a ROS bag](https://drive.google.com/file/d/0B2_h37bMVw3iYkdJTlRSUlJIamM/view?usp=sharing)
 * [Starter Repo](https://github.com/udacity/CarND-System-Integration)
 * [ROS Twist](http://docs.ros.org/jade/api/geometry_msgs/html/msg/Twist.html)
+* [Team Sign Up Spreadsheet](https://docs.google.com/spreadsheets/d/17I_0q8tylk9Q_Y3GTSq738KkBIoS6SUt1quR5lPPAdg/edit#gid=0)
 
 ### Notable Slack Channels
 * _#p-system-integration_ - Seems to be where this project is being discussed.
 * _#sdc-ros_ - ROS topics.
 * [Discussion Forum - System Integration](https://discussions.udacity.com/c/nd013-system-integration)
 
-## Interesting Chatter From Forums/Slack
-Seems like this could go sideways easily. Let's be careful to double
-check degrees/radians and get consistent.
+### Schedule
 
-> Seems that `waypoint_loader.py` is feeding degrees to
-> `quaternion_from_euler` which expects radians… and `bridge.py` is
-> feeding radians to `create_light` which expects degrees.
-> --   #davidm 2017-09-07
+Project Due:
+**2017-10-02**
 
-And in a similar theme...
+Term Ends: 2017-10-16
 
-> probably the simulator calculates in kmh, displays in mph and wants
-> data in mps
-> -- #kostas.oreopoulos 2017-09-07
+```
+Su Mo Tu We Th Fr Sa  
+10 11 12 13 14 15 16  
+17 18 19 20 21 22 23
+24 25 26 27 28 29 30  September 2017       
+ 1  2  3  4  5  6  7  October 2017      
+ 8  9 10 11 12 13 14  
+15 16 17 18 19 20 21  
+```
 
-[?](https://discussions.udacity.com/t/units-for-ros-topics-in-the-final-project/360954/1)
-=======
-5. Confirm that traffic light detection works on real life images
->>>>>>> CarND-Capstone/master
