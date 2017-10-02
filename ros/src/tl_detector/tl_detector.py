@@ -61,8 +61,8 @@ class TLDetector(object):
         #simulator_classifier_mode = is for using the script with the simulator with a classifier working
         #simulator_classifier_mode = is for using the script with the real images from the bagfiles with a classifier working
         self.simulator_debug_mode = False
-        self.simulator_classifier_mode = 1
-        self.realimages_classifier_mode = 0
+        self.simulator_classifier_mode = 0
+        self.realimages_classifier_mode = 1
         self.save_images_simulator = 0
         self.save_images_real = False
         self.c = 0 # Counter for distinct naming of images.
@@ -286,7 +286,7 @@ class TLDetector(object):
         if (self.simulator_classifier_mode==1):
             x, y = self.project_to_image_plane(light)
         if (self.realimages_classifier_mode==1):
-            x, y =  684, 548
+            x, y =  350, 475
 
         #TODO - DONE - use light location to zoom in on traffic light in image
         if ((x is False) or (y is False)): # if not (x and y)?
