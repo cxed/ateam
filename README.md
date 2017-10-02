@@ -6,7 +6,6 @@ A Team - System Integration Project
 Udacity Term 3 Final Capstone Project
 
 ## The A Team
-Slack channel - *#ateam*
 
 ### Members
   - 0 Chris _@cxed_ UTC-7
@@ -84,6 +83,8 @@ simulator course.
 
 Video: [A Team - Complete Simulation Success](https://youtu.be/XoXnJ4nqzmE)
 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/XoXnJ4nqzmE?rel=0" frameborder="0" allowfullscreen></iframe>
+
 ## Project Components
 
 ### Nodes
@@ -104,31 +105,8 @@ Video: [A Team - Complete Simulation Success](https://youtu.be/XoXnJ4nqzmE)
 
 ### Car Info
 * [ROS Interface to Lincoln MKZ DBW System](https://bitbucket.org/DataspeedInc/dbw_mkz_ros/src/)
-* throttle range = 0 to 1.0
-* Official docs on brake value says: `...units of torque (N*m). The
-  correct values for brake can be computed using the desired
-  acceleration, weight of the vehicle, and wheel radius.`
 * Carla is a https://en.wikipedia.org/wiki/Lincoln_MKZ
-  - Curb weight = 3,713-3,911 lb (1,684-1,774 kg)
-  - `/dbw_node/vehicle_mass`: 1080.0
-  - 726 g/L density of gas. 13.5gal=51.1Liters, max fuel mass=37.1kg
-  - 4 passengers = 280 kg
-  - Let's just say 2000kg for a deployed car.
-* Decel_Force(newtons) = Mass_car(kg) * Max_decel(meter/s^2) 
-* MaxBrakeTorque(newton * meter) = Decel_Force(newtons) * wheel_radius(meters) / 4 wheels
-* MaxBrakeTorque(newton * meter) = Mass_car(kg) * Max_decel(meter/s^2) * wheel_radius(meters) / 4 wheels
-* Wheel radius
-  - `rospy.get_param('~wheel_radius', 0.2413)` but...
-  - `/dbw_node/wheel_radius`: 0.335
-  - Chris independently calculated the wheel radius to be .340m
-  - ...so let's go with .335
-* MaxBrakeTorque
-  - (newton * meter) = 2000(kg) * 5(meter/s^2) * .335(meters) / 4 wheels
-  - MaxBrakeTorque= 837.5Nm
-
-### Explicit Requirements
-* Code via GitHub
-* README.md
+* Curb weight = 3,713-3,911 lb (1,684-1,774 kg)
 
 ## Run
 ```
@@ -149,6 +127,7 @@ rqt_console
 * [Team Sign Up Spreadsheet](https://docs.google.com/spreadsheets/d/17I_0q8tylk9Q_Y3GTSq738KkBIoS6SUt1quR5lPPAdg/edit#gid=0)
 
 ### Notable Slack Channels
+* #ateam - **A Team** Slack channel.
 * _#p-system-integration_ - Seems to be where this project is being discussed.
 * _#sdc-ros_ - ROS topics.
 * [Discussion Forum - System Integration](https://discussions.udacity.com/c/nd013-system-integration)
