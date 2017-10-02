@@ -83,9 +83,7 @@ simulator course.
 
 Video: [A Team - Complete Simulation Success](https://youtu.be/XoXnJ4nqzmE)
 
-<div mardown="0">
-<iframe width="560" height="315" src="https://www.youtube.com/embed/XoXnJ4nqzmE?rel=0" frameborder="0" allowfullscreen></iframe>
-</div>
+[![A Team](https://img.youtube.com/vi/XoXnJ4nqzmE/0.jpg)](https://www.youtube.com/watch?v=XoXnJ4nqzmE)
 
 ## Project Components
 
