@@ -26,6 +26,9 @@ class TLDetector(object):
         self.camera_image = None
         self.lights = []
 
+        # Use is_sim_launch to determine if we are launched in sim or site
+        self.is_sim_launch = rospy.get_param("~sim_launch", False)
+
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
 
