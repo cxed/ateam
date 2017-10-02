@@ -93,6 +93,15 @@ Video: [A Team - Complete Simulation Success](https://youtu.be/XoXnJ4nqzmE)
 
 [![A Team](https://img.youtube.com/vi/XoXnJ4nqzmE/0.jpg)](https://www.youtube.com/watch?v=XoXnJ4nqzmE)
 
+Here is a video showing the team's project code running on http://ros.org[ROS]
+http://wiki.ros.org/rosbag[bag] data of a real world site. When the
+vehicle is within range, the classifier is activated and accurately
+discerns the light's state.
+
+Video: [A Team - Complete Site Success](https://youtu.be/gthHnvHFEnY)
+
+[![A Team](https://img.youtube.com/vi/gthHnvHFEnY/0.jpg)](https://www.youtube.com/watch?v=gthHnvHFEnY)
+
 ## Project Components
 
 ### Nodes
