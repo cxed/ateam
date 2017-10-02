@@ -216,9 +216,6 @@ class WaypointUpdater(object):
 
         self.next_waypoint_index = closest_waypoint_idx
 
-        # check the distance
-        self.check_next_waypoint_distance()
-
         self.log_waypoint_progress()
 
         # save next waypoint index to last waypoint index
