@@ -297,9 +297,11 @@ class TLDetector(object):
             if (self.simulator_classifier_mode==1):
                 cv_cropped_image = cv_image[(y-225):(y+225),(x-150):(x+150)]
                 cv_cropped_image = cv2.resize(cv_cropped_image,(200,300),interpolation = cv2.INTER_CUBIC)
+            # Crop 700x250+0+300 then Scale by half down to 350x125 
+            # This will then match the data and classifier Chris made from the bag files.
             if (self.realimages_classifier_mode==1):
-                cv_cropped_image = cv_image[(y-375):(y+375),(x-250):(x+250)]
-                cv_cropped_image = cv2.resize(cv_cropped_image,(200,300),interpolation = cv2.INTER_CUBIC)
+                cv_cropped_image = cv_image[(y-125):(y+124),(x-350):(x+349)]
+                cv_cropped_image = cv2.resize(cv_cropped_image,(350,125),interpolation = cv2.INTER_CUBIC)
 
             #This gets only taken if one wants to save images for the classifier training. Not being used in end system
             if(self.save_images_simulator==1):
